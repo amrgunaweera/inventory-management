@@ -3,6 +3,7 @@ import { AuthProvider, useAuth } from './context/AuthContext';
 import { InventoryProvider } from './context/InventoryContext';
 import { SubscriptionProvider } from './context/SubscriptionContext';
 import Layout from './components/layout/Layout';
+import { canAccessRoute } from './lib/roles';
 
 import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
@@ -14,7 +15,15 @@ import Alerts from './pages/Alerts';
 import Export from './pages/Export';
 import Settings from './pages/Settings';
 import Billing from './pages/Billing';
+import TeamManagement from './pages/TeamManagement';
+import Suppliers from './pages/Suppliers';
+import Warehouses from './pages/Warehouses';
+import AuditLog from './pages/AuditLog';
+import AccessDenied from './pages/AccessDenied';
 
+/**
+ * PrivateRoute — Requires authentication. Redirects to /login if not logged in.
+ */
 function PrivateRoute({ children }) {
   const { user, loading } = useAuth();
   if (loading) return (
@@ -28,6 +37,19 @@ function PrivateRoute({ children }) {
   return user ? children : <Navigate to="/login" replace />;
 }
 
+/**
+ * RoleRoute — Requires authentication + route-level permission.
+ * If user lacks permission, shows AccessDenied instead of the page.
+ */
+function RoleRoute({ route, children }) {
+  const { user } = useAuth();
+  if (!user) return null;
+  if (!canAccessRoute(user.role, route)) {
+    return <AccessDenied />;
+  }
+  return children;
+}
+
 function AppRoutes() {
   return (
     <Routes>
@@ -39,15 +61,20 @@ function AppRoutes() {
           <PrivateRoute>
             <Layout>
               <Routes>
-                <Route path="/dashboard" element={<Dashboard />} />
-                <Route path="/products" element={<Products />} />
-                <Route path="/categories" element={<Categories />} />
-                <Route path="/orders" element={<Orders />} />
-                <Route path="/reports" element={<Reports />} />
-                <Route path="/alerts" element={<Alerts />} />
-                <Route path="/export" element={<Export />} />
-                <Route path="/settings" element={<Settings />} />
-                <Route path="/billing" element={<Billing />} />
+                <Route path="/dashboard" element={<RoleRoute route="/dashboard"><Dashboard /></RoleRoute>} />
+                <Route path="/products" element={<RoleRoute route="/products"><Products /></RoleRoute>} />
+                <Route path="/categories" element={<RoleRoute route="/categories"><Categories /></RoleRoute>} />
+                <Route path="/orders" element={<RoleRoute route="/orders"><Orders /></RoleRoute>} />
+                <Route path="/reports" element={<RoleRoute route="/reports"><Reports /></RoleRoute>} />
+                <Route path="/alerts" element={<RoleRoute route="/alerts"><Alerts /></RoleRoute>} />
+                <Route path="/export" element={<RoleRoute route="/export"><Export /></RoleRoute>} />
+                <Route path="/settings" element={<RoleRoute route="/settings"><Settings /></RoleRoute>} />
+                <Route path="/billing" element={<RoleRoute route="/billing"><Billing /></RoleRoute>} />
+                <Route path="/team" element={<RoleRoute route="/team"><TeamManagement /></RoleRoute>} />
+                <Route path="/suppliers" element={<RoleRoute route="/suppliers"><Suppliers /></RoleRoute>} />
+                <Route path="/warehouses" element={<RoleRoute route="/warehouses"><Warehouses /></RoleRoute>} />
+                <Route path="/audit-log" element={<RoleRoute route="/audit-log"><AuditLog /></RoleRoute>} />
+                <Route path="/access-denied" element={<AccessDenied />} />
                 <Route path="*" element={<Navigate to="/dashboard" replace />} />
               </Routes>
             </Layout>

@@ -15,7 +15,7 @@ export default function Login() {
 
   // Register extra fields
   const [name, setName] = useState('');
-  const [store, setStore] = useState('');
+  const [orgName, setOrgName] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
 
   const [showPw, setShowPw] = useState(false);
@@ -30,7 +30,7 @@ export default function Login() {
     setEmail('');
     setPassword('');
     setName('');
-    setStore('');
+    setOrgName('');
     setConfirmPassword('');
   };
 
@@ -57,7 +57,7 @@ export default function Login() {
     setLoading(true);
     const result = mode === 'login'
       ? await login(email, password)
-      : await register(email, password, name, store);
+      : await register(email, password, name, orgName);
 
     if (result.success) {
       navigate('/dashboard');
@@ -82,7 +82,7 @@ export default function Login() {
             <IconBuildingStore size={28} className="text-white" />
           </div>
           <h1 className="text-2xl font-bold text-white">Smartventory</h1>
-          <p className="text-slate-400 text-sm mt-1">Inventory management for small businesses</p>
+          <p className="text-slate-400 text-sm mt-1">Inventory management for teams</p>
         </div>
 
         {/* Card */}
@@ -130,16 +130,19 @@ export default function Login() {
                 </div>
                 <div className="space-y-1">
                   <Label className="text-xs font-semibold text-slate-400 uppercase tracking-wide">
-                    Store Name
+                    Organization Name
                   </Label>
                   <Input
                     type="text"
-                    value={store}
-                    onChange={(e) => setStore(e.target.value)}
+                    value={orgName}
+                    onChange={(e) => setOrgName(e.target.value)}
                     className="w-full bg-white/5 border-white/10 text-white placeholder:text-slate-500"
-                    placeholder="The Niche Shop"
+                    placeholder="Acme Corp"
                     required
                   />
+                  <p className="text-[11px] text-slate-500 mt-1">
+                    Have an invite? Just sign up with your invited email — you'll be added automatically.
+                  </p>
                 </div>
               </>
             )}
@@ -227,7 +230,7 @@ export default function Login() {
         </div>
 
         <p className="text-center text-xs text-slate-500 mt-6">
-          © 2026 Smartventory · For businesses & retailers
+          © 2026 Smartventory · For businesses & teams
         </p>
       </div>
     </div>

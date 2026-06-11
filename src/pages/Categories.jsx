@@ -4,6 +4,7 @@ import Modal from '../components/ui/Modal';
 import UpgradeBanner from '../components/ui/UpgradeBanner';
 import { useInventory } from '../context/InventoryContext';
 import { useSubscription } from '../context/SubscriptionContext';
+import { useAuth } from '../context/AuthContext';
 
 const COLORS = ['#6366f1','#f59e0b','#10b981','#ec4899','#f97316','#8b5cf6','#06b6d4','#ef4444','#84cc16','#14b8a6'];
 const EMPTY = { name: '', description: '', color: COLORS[0] };
@@ -11,6 +12,10 @@ const EMPTY = { name: '', description: '', color: COLORS[0] };
 export default function Categories() {
   const { categories, addCategory, updateCategory, deleteCategory, products } = useInventory();
   const { plan, withinLimit } = useSubscription();
+  const { hasPermission } = useAuth();
+  const canCreate = hasPermission('categories.create');
+  const canEdit = hasPermission('categories.edit');
+  const canDelete = hasPermission('categories.delete');
   const [isOpen, setIsOpen] = useState(false);
   const [editTarget, setEditTarget] = useState(null);
   const [form, setForm] = useState(EMPTY);
@@ -42,7 +47,7 @@ export default function Categories() {
 
   return (
     <div className="space-y-5 animate-slide-up">
-      {atLimit && (
+      {atLimit && canCreate && (
         <UpgradeBanner message={`You've reached the Free plan limit of ${plan.limits.categories} categories. Upgrade to Pro for unlimited categories.`} />
       )}
 
@@ -52,9 +57,11 @@ export default function Categories() {
             <h2 className="text-base font-bold text-slate-800">Product Categories</h2>
             <p className="text-xs text-slate-400 mt-0.5">{categories.length} categories</p>
           </div>
-          <button onClick={openAdd} disabled={atLimit} className="btn-primary disabled:opacity-50 disabled:cursor-not-allowed">
-            <IconPlus size={16} /> Add Category
-          </button>
+          {canCreate && (
+            <button onClick={openAdd} disabled={atLimit} className="btn-primary disabled:opacity-50 disabled:cursor-not-allowed">
+              <IconPlus size={16} /> Add Category
+            </button>
+          )}
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
@@ -73,14 +80,20 @@ export default function Categories() {
                   <p className="text-xs text-slate-400 truncate">{cat.description || 'No description'}</p>
                   <p className="text-xs text-slate-500 mt-0.5 font-medium">{count} product{count !== 1 ? 's' : ''}</p>
                 </div>
-                <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                  <button onClick={() => openEdit(cat)} className="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-brand-50 text-slate-400 hover:text-brand-500 transition-colors">
-                    <IconEdit size={14} />
-                  </button>
-                  <button onClick={() => setDeleteConfirm(cat)} className="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-red-50 text-slate-400 hover:text-red-500 transition-colors">
-                    <IconTrash size={14} />
-                  </button>
-                </div>
+                {(canEdit || canDelete) && (
+                  <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                    {canEdit && (
+                      <button onClick={() => openEdit(cat)} className="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-brand-50 text-slate-400 hover:text-brand-500 transition-colors">
+                        <IconEdit size={14} />
+                      </button>
+                    )}
+                    {canDelete && (
+                      <button onClick={() => setDeleteConfirm(cat)} className="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-red-50 text-slate-400 hover:text-red-500 transition-colors">
+                        <IconTrash size={14} />
+                      </button>
+                    )}
+                  </div>
+                )}
               </div>
             );
           })}

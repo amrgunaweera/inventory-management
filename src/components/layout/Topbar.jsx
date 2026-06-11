@@ -2,6 +2,7 @@ import { useLocation } from 'react-router-dom';
 import { IconSearch, IconBell, IconLogout } from '@tabler/icons-react';
 import { useAuth } from '../../context/AuthContext';
 import { useInventory } from '../../context/InventoryContext';
+import RoleBadge from '../ui/RoleBadge';
 
 const PAGE_TITLES = {
   '/dashboard': { title: 'Dashboard', sub: 'Welcome back 👋' },
@@ -13,6 +14,10 @@ const PAGE_TITLES = {
   '/export': { title: 'CSV Export', sub: 'Download your data' },
   '/settings': { title: 'Settings', sub: 'Store configuration' },
   '/billing': { title: 'Billing & Plans', sub: 'Manage your subscription' },
+  '/team': { title: 'Team Management', sub: 'Manage members and roles' },
+  '/suppliers': { title: 'Suppliers', sub: 'Manage vendor relationships' },
+  '/warehouses': { title: 'Warehouses', sub: 'Manage storage locations' },
+  '/audit-log': { title: 'Audit Log', sub: 'System activity history' },
 };
 
 export default function Topbar() {
@@ -54,8 +59,11 @@ export default function Topbar() {
           {user?.avatar || 'U'}
         </div>
         <div className="hidden md:block">
-          <p className="text-sm font-semibold text-slate-800 leading-none">{user?.name}</p>
-          <p className="text-xs text-slate-400 mt-0.5">{user?.store}</p>
+          <div className="flex items-center gap-2">
+            <p className="text-sm font-semibold text-slate-800 leading-none">{user?.name}</p>
+            <RoleBadge role={user?.role} size="sm" />
+          </div>
+          <p className="text-xs text-slate-400 mt-0.5">{user?.orgName || 'My Organization'}</p>
         </div>
         <button
           onClick={logout}

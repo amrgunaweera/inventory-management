@@ -3,10 +3,11 @@ import { IconDeviceFloppy, IconCheck } from '@tabler/icons-react';
 import { useAuth } from '../context/AuthContext';
 
 export default function Settings() {
-  const { user } = useAuth();
+  const { user, hasPermission } = useAuth();
+  const isAdmin = hasPermission('settings.system');
   const [saved, setSaved] = useState(false);
   const [form, setForm] = useState({
-    storeName: user?.store || 'The Niche Shop',
+    storeName: user?.orgName || 'My Organization',
     email: user?.email || '',
     currency: 'USD',
     timezone: 'UTC-5',
@@ -24,41 +25,60 @@ export default function Settings() {
   return (
     <div className="space-y-5 animate-slide-up max-w-2xl">
       <form onSubmit={handleSave} className="space-y-5">
-        {/* Store Info */}
+        {/* Organization Info — admin only */}
+        {isAdmin && (
+          <div className="card">
+            <h3 className="text-base font-bold text-slate-800 mb-4">Organization Settings</h3>
+            <div className="space-y-4">
+              <div>
+                <label className="label">Organization Name</label>
+                <input className="input" value={form.storeName} onChange={e => setForm(f => ({ ...f, storeName: e.target.value }))} />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="label">Currency</label>
+                  <select className="input" value={form.currency} onChange={e => setForm(f => ({ ...f, currency: e.target.value }))}>
+                    <option value="USD">USD — US Dollar</option>
+                    <option value="GBP">GBP — British Pound</option>
+                    <option value="EUR">EUR — Euro</option>
+                    <option value="LKR">LKR — Sri Lankan Rupee</option>
+                    <option value="AUD">AUD — Australian Dollar</option>
+                    <option value="CAD">CAD — Canadian Dollar</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="label">Timezone</label>
+                  <select className="input" value={form.timezone} onChange={e => setForm(f => ({ ...f, timezone: e.target.value }))}>
+                    <option value="UTC-8">UTC-8 Pacific</option>
+                    <option value="UTC-5">UTC-5 Eastern</option>
+                    <option value="UTC+0">UTC+0 London</option>
+                    <option value="UTC+1">UTC+1 Central Europe</option>
+                    <option value="UTC+5.5">UTC+5:30 Colombo</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Personal Info — all roles */}
         <div className="card">
-          <h3 className="text-base font-bold text-slate-800 mb-4">Store Information</h3>
+          <h3 className="text-base font-bold text-slate-800 mb-4">Personal Information</h3>
           <div className="space-y-4">
             <div>
-              <label className="label">Store Name</label>
-              <input className="input" value={form.storeName} onChange={e => setForm(f => ({ ...f, storeName: e.target.value }))} />
+              <label className="label">Your Name</label>
+              <input className="input" value={user?.name || ''} disabled className="input bg-slate-50" />
             </div>
             <div>
-              <label className="label">Contact Email</label>
-              <input type="email" className="input" value={form.email} onChange={e => setForm(f => ({ ...f, email: e.target.value }))} />
+              <label className="label">Email Address</label>
+              <input type="email" className="input bg-slate-50" value={form.email} disabled />
             </div>
-            <div className="grid grid-cols-2 gap-4">
+            {user?.roleLabel && (
               <div>
-                <label className="label">Currency</label>
-                <select className="input" value={form.currency} onChange={e => setForm(f => ({ ...f, currency: e.target.value }))}>
-                  <option value="USD">USD — US Dollar</option>
-                  <option value="GBP">GBP — British Pound</option>
-                  <option value="EUR">EUR — Euro</option>
-                  <option value="LKR">LKR — Sri Lankan Rupee</option>
-                  <option value="AUD">AUD — Australian Dollar</option>
-                  <option value="CAD">CAD — Canadian Dollar</option>
-                </select>
+                <label className="label">Your Role</label>
+                <input className="input bg-slate-50" value={user.roleLabel} disabled />
               </div>
-              <div>
-                <label className="label">Timezone</label>
-                <select className="input" value={form.timezone} onChange={e => setForm(f => ({ ...f, timezone: e.target.value }))}>
-                  <option value="UTC-8">UTC-8 Pacific</option>
-                  <option value="UTC-5">UTC-5 Eastern</option>
-                  <option value="UTC+0">UTC+0 London</option>
-                  <option value="UTC+1">UTC+1 Central Europe</option>
-                  <option value="UTC+5.5">UTC+5:30 Colombo</option>
-                </select>
-              </div>
-            </div>
+            )}
           </div>
         </div>
 

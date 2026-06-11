@@ -1,58 +1,5 @@
 rules_version = '2';
 
-// ===============================================================
-// Assumed Data Model
-// ===============================================================
-//
-// Collection: users
-// Document ID: {uid} — Firebase Auth UID
-// Fields:
-//   - uid:       string (required, immutable) — Firebase UID
-//   - name:      string (required, 1–100 chars) — Display name
-//   - email:     string (required, valid email) — Email address
-//   - store:     string (required, 1–100 chars) — Store name
-//   - planId:    string (required, enum: free|pro|business) — Subscription tier
-//   - createdAt: timestamp (required, immutable) — Account creation time
-//   - updatedAt: timestamp (required) — Last profile update time
-//
-// Subcollection: users/{uid}/products
-// Document ID: auto-generated
-// Fields:
-//   - name:      string (required, 1–100 chars)
-//   - sku:       string (required, 1–50 chars)
-//   - category:  string (required, 1–50 chars)
-//   - price:     number (required, >= 0)
-//   - cost:      number (required, >= 0)
-//   - stock:     number (required, integer >= 0)
-//   - minStock:  number (required, integer >= 0)
-//   - status:    string (required, enum: active|inactive)
-//   - createdAt: timestamp (required, immutable)
-//   - updatedAt: timestamp (required)
-//
-// Subcollection: users/{uid}/categories
-// Document ID: auto-generated
-// Fields:
-//   - name:         string (required, 1–50 chars)
-//   - description:  string (optional, max 200 chars)
-//   - color:        string (required, max 7 chars e.g. #6366f1)
-//   - productCount: number (required, >= 0)
-//   - createdAt:    timestamp (required, immutable)
-//   - updatedAt:    timestamp (required)
-//
-// Subcollection: users/{uid}/orders
-// Document ID: auto-generated
-// Fields:
-//   - type:      string (required, enum: sale|purchase)
-//   - customer:  string (required, 1–100 chars)
-//   - items:     list (required, max 100 items)
-//   - total:     number (required, >= 0)
-//   - status:    string (required, enum: pending|processing|completed|cancelled)
-//   - date:      string (required, max 10 chars, YYYY-MM-DD)
-//   - createdAt: timestamp (required, immutable)
-//   - updatedAt: timestamp (required)
-//
-// ===============================================================
-
 service cloud.firestore {
   match /databases/{database}/documents {
 
@@ -73,134 +20,87 @@ service cloud.firestore {
       return isAuthenticated() && request.auth.uid == uid;
     }
 
-    function isValidEmail(email) {
-      return email is string &&
-        email.matches('^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$');
+    // Check if the current user is a member of the given organization
+    function isOrgMember(orgId) {
+      return isAuthenticated() && exists(/databases/$(database)/documents/organizations/$(orgId)/members/$(request.auth.uid));
     }
 
-    function isValidString(field, minLen, maxLen) {
-      return request.resource.data[field] is string &&
-        request.resource.data[field].size() >= minLen &&
-        request.resource.data[field].size() <= maxLen;
-    }
-
-    function hasOnlyAllowedFields(fields) {
-      return request.resource.data.keys().hasOnly(fields);
-    }
-
-    function areImmutableFieldsUnchanged(fields) {
-      return !request.resource.data.diff(resource.data).affectedKeys().hasAny(fields);
-    }
-
-    // ─── Domain Validators ──────────────────────────────────────
-
-    function isValidUserData(data) {
-      return hasOnlyAllowedFields(['uid', 'name', 'email', 'store', 'planId', 'createdAt', 'updatedAt']) &&
-        data.name is string && data.name.size() >= 1 && data.name.size() <= 100 &&
-        data.email is string && isValidEmail(data.email) &&
-        data.store is string && data.store.size() >= 1 && data.store.size() <= 100 &&
-        data.planId in ['free', 'pro', 'business'] &&
-        data.createdAt is timestamp &&
-        data.updatedAt is timestamp;
-    }
-
-    function isValidProductData(data) {
-      return hasOnlyAllowedFields(['name', 'sku', 'category', 'price', 'cost', 'stock', 'minStock', 'status', 'createdAt', 'updatedAt']) &&
-        data.name is string && data.name.size() >= 1 && data.name.size() <= 100 &&
-        data.sku is string && data.sku.size() >= 1 && data.sku.size() <= 50 &&
-        data.category is string && data.category.size() >= 1 && data.category.size() <= 50 &&
-        data.price is number && data.price >= 0 &&
-        data.cost is number && data.cost >= 0 &&
-        data.stock is number && data.stock >= 0 &&
-        data.minStock is number && data.minStock >= 0 &&
-        data.status in ['active', 'inactive'] &&
-        data.createdAt is timestamp &&
-        data.updatedAt is timestamp;
-    }
-
-    function isValidCategoryData(data) {
-      return hasOnlyAllowedFields(['name', 'description', 'color', 'productCount', 'createdAt', 'updatedAt']) &&
-        data.name is string && data.name.size() >= 1 && data.name.size() <= 50 &&
-        data.color is string && data.color.size() >= 1 && data.color.size() <= 7 &&
-        data.productCount is number && data.productCount >= 0 &&
-        data.createdAt is timestamp &&
-        data.updatedAt is timestamp;
-    }
-
-    function isValidOrderData(data) {
-      return hasOnlyAllowedFields(['type', 'customer', 'items', 'total', 'status', 'date', 'id', 'createdAt', 'updatedAt']) &&
-        data.type in ['sale', 'purchase'] &&
-        data.customer is string && data.customer.size() >= 1 && data.customer.size() <= 100 &&
-        data.items is list && data.items.size() <= 100 &&
-        data.total is number && data.total >= 0 &&
-        data.status in ['pending', 'processing', 'completed', 'cancelled'] &&
-        data.date is string && data.date.size() <= 10 &&
-        data.createdAt is timestamp &&
-        data.updatedAt is timestamp;
+    // Check if current user is an admin of the given organization
+    function isOrgAdmin(orgId) {
+      return isAuthenticated() &&
+             get(/databases/$(database)/documents/organizations/$(orgId)/members/$(request.auth.uid)).data.role == 'admin';
     }
 
     // ═══════════════════════════════════════════════════════════
     // users/{uid}  — User profile document
     // ═══════════════════════════════════════════════════════════
     match /users/{uid} {
-      // Only the owner can read their own profile
-      allow read: if isOwner(uid);
+      // Users can read/write their own profile
+      allow read, write: if isOwner(uid);
+    }
 
-      // User can only create their own profile doc with planId = 'free'
-      // Prevents self-escalation to admin/pro on creation
-      allow create: if isOwner(uid) &&
-        isValidUserData(request.resource.data) &&
-        request.resource.data.uid == uid &&
-        request.resource.data.planId == 'free';
+    // ═══════════════════════════════════════════════════════════
+    // organizations/{orgId}  — Organization docs
+    // ═══════════════════════════════════════════════════════════
+    match /organizations/{orgId} {
+      // Only members can read org data
+      allow read: if isOrgMember(orgId);
+      
+      // Only admins can update the org data (like name, plan)
+      allow update: if isOrgAdmin(orgId);
 
-      // User can update their own profile, but uid and createdAt are immutable
-      // planId CAN be updated (simulating upgrade — in production, gate this via Cloud Functions)
-      allow update: if isOwner(uid) &&
-        isValidUserData(request.resource.data) &&
-        areImmutableFieldsUnchanged(['uid', 'createdAt']);
+      // Any authenticated user can create an organization
+      allow create: if isAuthenticated();
 
-      // No deletion of user profiles
-      allow delete: if false;
+      // ─── members subcollection ────────────────────────────
+      match /members/{memberUid} {
+        // Members can see who else is in the org
+        allow read: if isOrgMember(orgId);
 
-      // ─── products subcollection ────────────────────────────
-      match /products/{productId} {
-        allow read: if isOwner(uid);
-
-        allow create: if isOwner(uid) && isValidProductData(request.resource.data);
-
-        allow update: if isOwner(uid) &&
-          isValidProductData(request.resource.data) &&
-          areImmutableFieldsUnchanged(['createdAt']);
-
-        allow delete: if isOwner(uid);
+        // A user can add themselves during organization creation or invitation acceptance
+        // Also admins can update/delete members
+        allow write: if isOwner(memberUid) || isOrgAdmin(orgId);
       }
 
-      // ─── categories subcollection ──────────────────────────
-      match /categories/{categoryId} {
-        allow read: if isOwner(uid);
-
-        allow create: if isOwner(uid) && isValidCategoryData(request.resource.data);
-
-        allow update: if isOwner(uid) &&
-          isValidCategoryData(request.resource.data) &&
-          areImmutableFieldsUnchanged(['createdAt']);
-
-        allow delete: if isOwner(uid);
+      // ─── invitations subcollection ────────────────────────
+      match /invitations/{inviteId} {
+        // Anyone authenticated can read invites to find their own
+        allow read: if isAuthenticated();
+        
+        // Members with team.manage rights can create invites (simplified to admin or member)
+        allow create, delete: if isOrgMember(orgId);
+        
+        // Users can accept their own invites (update status)
+        allow update: if isAuthenticated();
       }
 
-      // ─── orders subcollection ──────────────────────────────
-      match /orders/{orderId} {
-        allow read: if isOwner(uid);
+      // ─── shared collections ───────────────────────────────
+      // In production, we'd add granular role checks for writes.
+      // For now, any organization member can access their org's data.
 
-        allow create: if isOwner(uid) && isValidOrderData(request.resource.data);
+      match /products/{id} {
+        allow read, write: if isOrgMember(orgId);
+      }
 
-        // Orders can be updated (e.g. status change) but type and createdAt are immutable
-        allow update: if isOwner(uid) &&
-          isValidOrderData(request.resource.data) &&
-          areImmutableFieldsUnchanged(['type', 'createdAt']);
+      match /categories/{id} {
+        allow read, write: if isOrgMember(orgId);
+      }
 
-        // Orders cannot be deleted (audit trail)
-        allow delete: if false;
+      match /orders/{id} {
+        allow read, write: if isOrgMember(orgId);
+      }
+
+      match /suppliers/{id} {
+        allow read, write: if isOrgMember(orgId);
+      }
+
+      match /warehouses/{id} {
+        allow read, write: if isOrgMember(orgId);
+      }
+
+      match /auditLog/{id} {
+        allow read: if isOrgAdmin(orgId);
+        allow create: if isOrgMember(orgId);
       }
     }
   }

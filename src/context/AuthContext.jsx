@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useEffect, useRef } from 'react';
+import { createContext, useContext, useState, useEffect, useRef, useCallback } from 'react';
 import {
   onAuthStateChanged,
   signInWithEmailAndPassword,
@@ -7,7 +7,16 @@ import {
   updateProfile,
 } from 'firebase/auth';
 import { auth } from '../lib/firebase';
-import { createUserProfile, getUserProfile } from '../lib/firestoreService';
+import {
+  createUserProfile,
+  getUserProfile,
+  createOrganization,
+  getMember,
+  findInvitationByEmail,
+  acceptInvitation,
+  getOrganization,
+} from '../lib/firestoreService';
+import { hasPermission as checkPermission, canAccessRoute as checkRoute, ROLES } from '../lib/roles';
 
 const AuthContext = createContext(null);
 
@@ -23,20 +32,12 @@ export function AuthProvider({ children }) {
         return;
       }
       if (firebaseUser) {
-        // Augment the Firebase user with Firestore profile data
-        const profile = await getUserProfile(firebaseUser.uid);
-        setUser({
-          uid: firebaseUser.uid,
-          email: firebaseUser.email,
-          name: profile?.name || firebaseUser.displayName || 'User',
-          store: profile?.store || 'My Store',
-          avatar: (profile?.name || firebaseUser.displayName || 'U')
-            .split(' ')
-            .map((n) => n[0])
-            .join('')
-            .toUpperCase()
-            .slice(0, 2),
-        });
+        try {
+          await loadUserWithRole(firebaseUser);
+        } catch (err) {
+          console.error('Error loading user profile:', err);
+          setUser(null);
+        }
       } else {
         setUser(null);
       }
@@ -45,6 +46,45 @@ export function AuthProvider({ children }) {
 
     return () => unsubscribe();
   }, []);
+
+  /**
+   * Load user profile + organization membership + role from Firestore.
+   */
+  const loadUserWithRole = async (firebaseUser) => {
+    const profile = await getUserProfile(firebaseUser.uid);
+    const orgId = profile?.organizationId || null;
+
+    let role = null;
+    let orgName = null;
+
+    if (orgId) {
+      // Fetch membership to get role
+      const membership = await getMember(orgId, firebaseUser.uid);
+      role = membership?.role || null;
+
+      // Fetch org name
+      const org = await getOrganization(orgId);
+      orgName = org?.name || 'My Organization';
+    }
+
+    const displayName = profile?.name || firebaseUser.displayName || 'User';
+
+    setUser({
+      uid: firebaseUser.uid,
+      email: firebaseUser.email,
+      name: displayName,
+      organizationId: orgId,
+      orgName: orgName,
+      role: role,
+      roleLabel: role ? ROLES[role]?.label : null,
+      avatar: displayName
+        .split(' ')
+        .map((n) => n[0])
+        .join('')
+        .toUpperCase()
+        .slice(0, 2),
+    });
+  };
 
   /**
    * Sign in an existing user with email and password.
@@ -61,33 +101,64 @@ export function AuthProvider({ children }) {
   };
 
   /**
-   * Register a new user and create their Firestore profile.
+   * Register a new user.
+   * If they have a pending invitation, join that org with the invited role.
+   * Otherwise, create a new organization and become admin.
    */
-  const register = async (email, password, name, store) => {
+  const register = async (email, password, name, orgName) => {
     try {
       isRegistering.current = true;
       setLoading(true);
+
+      // Create Firebase Auth account
       const credential = await createUserWithEmailAndPassword(auth, email, password);
       const { uid } = credential.user;
-
-      // Set display name on Firebase Auth profile
       await updateProfile(credential.user, { displayName: name });
 
-      // Create user document in Firestore
-      await createUserProfile(uid, { name, email, store });
+      // Check for a pending invitation
+      const invitation = await findInvitationByEmail(email);
 
+      let organizationId;
+      let role;
+      let resolvedOrgName;
+
+      if (invitation) {
+        // Accept the invitation — join existing org
+        role = await acceptInvitation(invitation.orgId, invitation.inviteId, uid, { name, email });
+        organizationId = invitation.orgId;
+        resolvedOrgName = invitation.orgName;
+
+        // Create user profile pointing to the org
+        await createUserProfile(uid, { name, email, organizationId });
+      } else {
+        // No invitation — create a new org and become admin
+        await createUserProfile(uid, { name, email, organizationId: null });
+        organizationId = await createOrganization(uid, {
+          name: orgName || 'My Organization',
+          userName: name,
+          userEmail: email,
+        });
+        role = 'admin';
+        resolvedOrgName = orgName || 'My Organization';
+      }
+
+      const displayName = name || 'User';
       setUser({
         uid,
         email,
-        name,
-        store,
-        avatar: name
+        name: displayName,
+        organizationId,
+        orgName: resolvedOrgName,
+        role,
+        roleLabel: ROLES[role]?.label || role,
+        avatar: displayName
           .split(' ')
           .map((n) => n[0])
           .join('')
           .toUpperCase()
           .slice(0, 2),
       });
+
       setLoading(false);
       isRegistering.current = false;
       return { success: true };
@@ -105,8 +176,34 @@ export function AuthProvider({ children }) {
     await signOut(auth);
   };
 
+  // ─── Permission Helpers (derived from user.role) ─────────────────────────────
+
+  const hasPermission = useCallback(
+    (permission) => {
+      return checkPermission(user?.role, permission);
+    },
+    [user?.role]
+  );
+
+  const canAccess = useCallback(
+    (route) => {
+      return checkRoute(user?.role, route);
+    },
+    [user?.role]
+  );
+
   return (
-    <AuthContext.Provider value={{ user, loading, login, register, logout }}>
+    <AuthContext.Provider
+      value={{
+        user,
+        loading,
+        login,
+        register,
+        logout,
+        hasPermission,
+        canAccess,
+      }}
+    >
       {children}
     </AuthContext.Provider>
   );

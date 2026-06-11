@@ -8,12 +8,14 @@ import { Badge } from '../components/ui/Badge';
 import UpgradeBanner from '../components/ui/UpgradeBanner';
 import { useInventory } from '../context/InventoryContext';
 import { useSubscription } from '../context/SubscriptionContext';
+import { useAuth } from '../context/AuthContext';
 
 const EMPTY = { name: '', sku: '', category: '', price: '', cost: '', stock: '', minStock: '', status: 'active' };
 
 export default function Products() {
   const { products, addProduct, updateProduct, deleteProduct, categories } = useInventory();
   const { plan, withinLimit } = useSubscription();
+  const { hasPermission } = useAuth();
   const [search, setSearch] = useState('');
   const [filterCat, setFilterCat] = useState('all');
   const [filterStatus, setFilterStatus] = useState('all');
@@ -22,6 +24,9 @@ export default function Products() {
   const [form, setForm] = useState(EMPTY);
   const [deleteConfirm, setDeleteConfirm] = useState(null);
 
+  const canCreate = hasPermission('products.create');
+  const canEdit = hasPermission('products.edit');
+  const canDelete = hasPermission('products.delete');
   const atLimit = !withinLimit('products', products.length);
 
   const filtered = products.filter(p => {
@@ -68,7 +73,7 @@ export default function Products() {
 
   return (
     <div className="space-y-5 animate-slide-up">
-      {atLimit && (
+      {atLimit && canCreate && (
         <UpgradeBanner message={`You've reached the Free plan limit of ${plan.limits.products} products. Upgrade to Pro for unlimited products.`} />
       )}
 
@@ -98,13 +103,15 @@ export default function Products() {
             </select>
           </div>
 
-          <button
-            onClick={openAdd}
-            disabled={atLimit}
-            className="btn-primary disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            <IconPlus size={16} /> Add Product
-          </button>
+          {canCreate && (
+            <button
+              onClick={openAdd}
+              disabled={atLimit}
+              className="btn-primary disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <IconPlus size={16} /> Add Product
+            </button>
+          )}
         </div>
 
         {/* Stats row */}
@@ -127,7 +134,9 @@ export default function Products() {
                 <th className="px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide text-right">Price</th>
                 <th className="px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide text-right">Stock</th>
                 <th className="px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">Status</th>
-                <th className="px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide text-right">Actions</th>
+                {(canEdit || canDelete) && (
+                  <th className="px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide text-right">Actions</th>
+                )}
               </tr>
             </thead>
             <tbody>
@@ -159,22 +168,28 @@ export default function Products() {
                   <td className="px-4 py-3">
                     <Badge variant={p.status}>{p.status}</Badge>
                   </td>
-                  <td className="px-4 py-3 text-right">
-                    <div className="flex items-center justify-end gap-1">
-                      <button
-                        onClick={() => openEdit(p)}
-                        className="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-brand-50 text-slate-400 hover:text-brand-500 transition-colors"
-                      >
-                        <IconEdit size={14} />
-                      </button>
-                      <button
-                        onClick={() => setDeleteConfirm(p)}
-                        className="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-red-50 text-slate-400 hover:text-red-500 transition-colors"
-                      >
-                        <IconTrash size={14} />
-                      </button>
-                    </div>
-                  </td>
+                  {(canEdit || canDelete) && (
+                    <td className="px-4 py-3 text-right">
+                      <div className="flex items-center justify-end gap-1">
+                        {canEdit && (
+                          <button
+                            onClick={() => openEdit(p)}
+                            className="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-brand-50 text-slate-400 hover:text-brand-500 transition-colors"
+                          >
+                            <IconEdit size={14} />
+                          </button>
+                        )}
+                        {canDelete && (
+                          <button
+                            onClick={() => setDeleteConfirm(p)}
+                            className="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-red-50 text-slate-400 hover:text-red-500 transition-colors"
+                          >
+                            <IconTrash size={14} />
+                          </button>
+                        )}
+                      </div>
+                    </td>
+                  )}
                 </tr>
               ))}
             </tbody>
@@ -190,72 +205,76 @@ export default function Products() {
       </div>
 
       {/* Add/Edit Modal */}
-      <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} title={editTarget ? 'Edit Product' : 'Add Product'}>
-        <form onSubmit={handleSave} className="space-y-4">
-          <div className="grid grid-cols-2 gap-4">
-            <div className="col-span-2">
-              <label className="label">Product Name</label>
-              <input required className="input" value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} placeholder="e.g. Wireless Earbuds Pro" />
+      {(canCreate || canEdit) && (
+        <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} title={editTarget ? 'Edit Product' : 'Add Product'}>
+          <form onSubmit={handleSave} className="space-y-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div className="col-span-2">
+                <label className="label">Product Name</label>
+                <input required className="input" value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} placeholder="e.g. Wireless Earbuds Pro" />
+              </div>
+              <div>
+                <label className="label">SKU</label>
+                <input required className="input" value={form.sku} onChange={e => setForm(f => ({ ...f, sku: e.target.value }))} placeholder="e.g. WEP-001" />
+              </div>
+              <div>
+                <label className="label">Category</label>
+                <input required className="input" value={form.category} onChange={e => setForm(f => ({ ...f, category: e.target.value }))} placeholder="e.g. Electronics" list="cat-list" />
+                <datalist id="cat-list">
+                  {categories.map(c => <option key={c.id} value={c.name} />)}
+                </datalist>
+              </div>
+              <div>
+                <label className="label">Selling Price ($)</label>
+                <input required type="number" step="0.01" min="0" className="input" value={form.price} onChange={e => setForm(f => ({ ...f, price: e.target.value }))} placeholder="0.00" />
+              </div>
+              <div>
+                <label className="label">Cost Price ($)</label>
+                <input required type="number" step="0.01" min="0" className="input" value={form.cost} onChange={e => setForm(f => ({ ...f, cost: e.target.value }))} placeholder="0.00" />
+              </div>
+              <div>
+                <label className="label">Stock Quantity</label>
+                <input required type="number" min="0" className="input" value={form.stock} onChange={e => setForm(f => ({ ...f, stock: e.target.value }))} placeholder="0" />
+              </div>
+              <div>
+                <label className="label">Min Stock Threshold</label>
+                <input required type="number" min="0" className="input" value={form.minStock} onChange={e => setForm(f => ({ ...f, minStock: e.target.value }))} placeholder="0" />
+              </div>
+              <div className="col-span-2">
+                <label className="label">Status</label>
+                <select className="input" value={form.status} onChange={e => setForm(f => ({ ...f, status: e.target.value }))}>
+                  <option value="active">Active</option>
+                  <option value="inactive">Inactive</option>
+                </select>
+              </div>
             </div>
-            <div>
-              <label className="label">SKU</label>
-              <input required className="input" value={form.sku} onChange={e => setForm(f => ({ ...f, sku: e.target.value }))} placeholder="e.g. WEP-001" />
+            <div className="flex gap-3 pt-2">
+              <button type="button" onClick={() => setIsModalOpen(false)} className="btn-secondary flex-1">Cancel</button>
+              <button type="submit" className="btn-primary flex-1">
+                {editTarget ? 'Save Changes' : 'Add Product'}
+              </button>
             </div>
-            <div>
-              <label className="label">Category</label>
-              <input required className="input" value={form.category} onChange={e => setForm(f => ({ ...f, category: e.target.value }))} placeholder="e.g. Electronics" list="cat-list" />
-              <datalist id="cat-list">
-                {categories.map(c => <option key={c.id} value={c.name} />)}
-              </datalist>
-            </div>
-            <div>
-              <label className="label">Selling Price ($)</label>
-              <input required type="number" step="0.01" min="0" className="input" value={form.price} onChange={e => setForm(f => ({ ...f, price: e.target.value }))} placeholder="0.00" />
-            </div>
-            <div>
-              <label className="label">Cost Price ($)</label>
-              <input required type="number" step="0.01" min="0" className="input" value={form.cost} onChange={e => setForm(f => ({ ...f, cost: e.target.value }))} placeholder="0.00" />
-            </div>
-            <div>
-              <label className="label">Stock Quantity</label>
-              <input required type="number" min="0" className="input" value={form.stock} onChange={e => setForm(f => ({ ...f, stock: e.target.value }))} placeholder="0" />
-            </div>
-            <div>
-              <label className="label">Min Stock Threshold</label>
-              <input required type="number" min="0" className="input" value={form.minStock} onChange={e => setForm(f => ({ ...f, minStock: e.target.value }))} placeholder="0" />
-            </div>
-            <div className="col-span-2">
-              <label className="label">Status</label>
-              <select className="input" value={form.status} onChange={e => setForm(f => ({ ...f, status: e.target.value }))}>
-                <option value="active">Active</option>
-                <option value="inactive">Inactive</option>
-              </select>
-            </div>
-          </div>
-          <div className="flex gap-3 pt-2">
-            <button type="button" onClick={() => setIsModalOpen(false)} className="btn-secondary flex-1">Cancel</button>
-            <button type="submit" className="btn-primary flex-1">
-              {editTarget ? 'Save Changes' : 'Add Product'}
-            </button>
-          </div>
-        </form>
-      </Modal>
+          </form>
+        </Modal>
+      )}
 
       {/* Delete Confirm Modal */}
-      <Modal isOpen={!!deleteConfirm} onClose={() => setDeleteConfirm(null)} title="Delete Product" size="sm">
-        <p className="text-sm text-slate-600 mb-6">
-          Are you sure you want to delete <strong>{deleteConfirm?.name}</strong>? This action cannot be undone.
-        </p>
-        <div className="flex gap-3">
-          <button onClick={() => setDeleteConfirm(null)} className="btn-secondary flex-1">Cancel</button>
-          <button
-            onClick={() => { deleteProduct(deleteConfirm.id); setDeleteConfirm(null); }}
-            className="btn-danger flex-1"
-          >
-            Delete
-          </button>
-        </div>
-      </Modal>
+      {canDelete && (
+        <Modal isOpen={!!deleteConfirm} onClose={() => setDeleteConfirm(null)} title="Delete Product" size="sm">
+          <p className="text-sm text-slate-600 mb-6">
+            Are you sure you want to delete <strong>{deleteConfirm?.name}</strong>? This action cannot be undone.
+          </p>
+          <div className="flex gap-3">
+            <button onClick={() => setDeleteConfirm(null)} className="btn-secondary flex-1">Cancel</button>
+            <button
+              onClick={() => { deleteProduct(deleteConfirm.id); setDeleteConfirm(null); }}
+              className="btn-danger flex-1"
+            >
+              Delete
+            </button>
+          </div>
+        </Modal>
+      )}
     </div>
   );
 }

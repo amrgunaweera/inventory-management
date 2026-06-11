@@ -3,20 +3,32 @@ import {
   IconLayoutDashboard, IconPackage, IconTag, IconShoppingCart,
   IconChartBar, IconBell, IconFileExport, IconSettings,
   IconCreditCard, IconLock, IconChevronRight, IconBuildingStore,
+  IconUsers, IconTruck, IconBuildingWarehouse, IconClipboardList,
 } from '@tabler/icons-react';
 import { useSubscription } from '../../context/SubscriptionContext';
 import { useInventory } from '../../context/InventoryContext';
+import { useAuth } from '../../context/AuthContext';
+import { canAccessRoute, getRoleSidebarClasses, ROLES } from '../../lib/roles';
 
 const NAV_ITEMS = [
+  // Core — visible to all roles (route access handled per-role)
   { label: 'Dashboard', icon: IconLayoutDashboard, to: '/dashboard', feature: null },
   { label: 'Products', icon: IconPackage, to: '/products', feature: null },
   { label: 'Categories', icon: IconTag, to: '/categories', feature: null },
   { label: 'Orders', icon: IconShoppingCart, to: '/orders', feature: null },
-  { divider: true },
+  { divider: true, label: 'divider-1' },
+  // Operations
+  { label: 'Suppliers', icon: IconTruck, to: '/suppliers', feature: null },
+  { label: 'Warehouses', icon: IconBuildingWarehouse, to: '/warehouses', feature: null },
+  { divider: true, label: 'divider-2' },
+  // Analytics & Alerts
   { label: 'Reports', icon: IconChartBar, to: '/reports', feature: 'reports' },
   { label: 'Low Stock Alerts', icon: IconBell, to: '/alerts', feature: 'lowStockAlerts', badge: true },
   { label: 'CSV Export', icon: IconFileExport, to: '/export', feature: 'csvExport' },
-  { divider: true },
+  { divider: true, label: 'divider-3' },
+  // Admin
+  { label: 'Team', icon: IconUsers, to: '/team', feature: null },
+  { label: 'Audit Log', icon: IconClipboardList, to: '/audit-log', feature: null },
   { label: 'Settings', icon: IconSettings, to: '/settings', feature: null },
   { label: 'Billing', icon: IconCreditCard, to: '/billing', feature: null },
 ];
@@ -30,7 +42,25 @@ const PLAN_COLORS = {
 export default function Sidebar() {
   const { hasFeature, plan } = useSubscription();
   const { lowStockProducts } = useInventory();
+  const { user } = useAuth();
   const navigate = useNavigate();
+  const role = user?.role;
+
+  // Filter nav items based on role's route access
+  const visibleItems = NAV_ITEMS.filter((item) => {
+    if (item.divider) return true;
+    return canAccessRoute(role, item.to);
+  });
+
+  // Remove consecutive/trailing dividers
+  const cleanedItems = visibleItems.filter((item, idx, arr) => {
+    if (!item.divider) return true;
+    // Remove if first item, last item, or next item is also a divider
+    if (idx === 0) return false;
+    if (idx === arr.length - 1) return false;
+    if (arr[idx - 1]?.divider) return false;
+    return true;
+  });
 
   return (
     <aside className="fixed top-0 left-0 h-screen w-64 bg-sidebar flex flex-col z-30 select-none">
@@ -41,22 +71,29 @@ export default function Sidebar() {
         </div>
         <div>
           <span className="text-white font-bold text-base tracking-tight">Smartventory</span>
-          <span className="block text-slate-500 text-xs leading-none">Inventory Pro</span>
+          <span className="block text-slate-500 text-xs leading-none truncate max-w-[140px]">
+            {user?.orgName || 'Inventory Pro'}
+          </span>
         </div>
       </div>
 
-      {/* Plan badge */}
-      <div className="px-4 pt-4 pb-2">
-        <span className={`text-xs font-bold px-2.5 py-1 rounded-full uppercase tracking-widest ${PLAN_COLORS[plan.id]}`}>
+      {/* Role & Plan badges */}
+      <div className="px-4 pt-4 pb-2 space-y-1.5">
+        {role && (
+          <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-widest block w-fit ${getRoleSidebarClasses(role)}`}>
+            {ROLES[role]?.label || role}
+          </span>
+        )}
+        <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-widest block w-fit ${PLAN_COLORS[plan.id]}`}>
           {plan.name} Plan
         </span>
       </div>
 
       {/* Navigation */}
       <nav className="flex-1 px-3 py-2 overflow-y-auto space-y-0.5">
-        {NAV_ITEMS.map((item, idx) => {
+        {cleanedItems.map((item, idx) => {
           if (item.divider) {
-            return <div key={idx} className="my-2 border-t border-white/5" />;
+            return <div key={item.label || idx} className="my-2 border-t border-white/5" />;
           }
           const locked = item.feature && !hasFeature(item.feature);
           const Icon = item.icon;
@@ -97,13 +134,19 @@ export default function Sidebar() {
 
       {/* Footer */}
       <div className="p-4 border-t border-white/5">
-        <button
-          onClick={() => navigate('/billing')}
-          className="w-full flex items-center gap-2 text-xs text-slate-400 hover:text-white transition-colors duration-200 group"
-        >
-          <span className="flex-1 text-left">Upgrade plan</span>
-          <IconChevronRight size={14} className="group-hover:translate-x-0.5 transition-transform" />
-        </button>
+        {canAccessRoute(role, '/billing') ? (
+          <button
+            onClick={() => navigate('/billing')}
+            className="w-full flex items-center gap-2 text-xs text-slate-400 hover:text-white transition-colors duration-200 group"
+          >
+            <span className="flex-1 text-left">Upgrade plan</span>
+            <IconChevronRight size={14} className="group-hover:translate-x-0.5 transition-transform" />
+          </button>
+        ) : (
+          <div className="text-xs text-slate-500">
+            {plan.name} Plan
+          </div>
+        )}
       </div>
     </aside>
   );

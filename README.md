@@ -3,19 +3,24 @@
 A modern, responsive, and real-time inventory management system built with React, Tailwind CSS, and Firebase.
 
 ## Brief Overview
-Smartventory provides a comprehensive suite of tools for businesses to track stock levels, manage orders, organize products by categories, and view analytics. It features a secure authentication system, role-based dashboards, automated low-stock alerts, and subscription billing management.
+Smartventory is a multi-tenant, role-based inventory management platform designed for organizations with collaborative teams. It supports multiple users with granular role privileges, physical warehouse locations, vendor management, real-time audit logging, automated low-stock notifications, and organization-wide subscription billing.
 
 ## Features Available
-- **Dashboard Analytics:** Interactive charts and overview metrics.
-- **Product & Category Management:** Full CRUD operations for inventory items.
-- **Order Tracking:** Manage inbound and outbound inventory orders.
-- **Alerts System:** Notifications for low stock and critical events.
-- **Data Export:** Export functionalities for reports and inventory lists.
-- **Billing:** Subscription plan management.
+- **Multi-Tenant Organization Model:** Share product databases, warehouses, alerts, and orders securely within your company workspace.
+- **Role-Based Access Control (RBAC):** Define granular access privileges using 6 pre-configured roles (Administrator, Inventory Manager, Warehouse Staff, Purchasing Officer, Sales User, Management).
+- **Dashboard Analytics:** Role-tailored dashboards showcasing relevant key performance indicators.
+- **Product & Category Management:** Complete catalog management with customizable category taxonomies.
+- **Order Tracking:** Manage inbound purchase orders and outbound sales orders with role restrictions.
+- **Warehouses & Locations:** Track inventory quantities and transfer stock across multiple warehouses.
+- **Supplier Directory:** Register and monitor suppliers and associated products.
+- **Audit Logs:** Immutable, organization-wide transaction tracing for all critical resource updates.
+- **Alerts System:** Automated notifications for low stock, order completions, and structural changes.
+- **Data Export:** Secure exports of inventory levels and transaction histories to CSV formats.
+- **Billing:** Scalable organization-wide plan management (Free, Pro, Business).
 
 For detailed documentation, please refer to:
-- [System Features](docs/features.md)
-- [Special Notes](docs/special-notes.md)
+- [System Features & Roles](docs/features.md)
+- [Technical Architecture & Security](docs/special-notes.md)
 
 ## Quick Start
 ```bash

@@ -1,6 +1,6 @@
 import { createContext, useContext, useState, useEffect } from 'react';
 import { useAuth } from './AuthContext';
-import { getUserProfile, updateUserProfile } from '../lib/firestoreService';
+import { getOrganization, updateOrganization } from '../lib/firestoreService';
 
 const SubscriptionContext = createContext(null);
 
@@ -10,12 +10,14 @@ export const PLANS = {
     name: 'Free',
     price: 0,
     color: 'slate',
-    limits: { products: 50, categories: 3, staff: 1 },
+    limits: { products: 50, categories: 3, members: 3 },
     features: {
       lowStockAlerts: false,
       csvExport: false,
       reports: false,
       multiLocation: false,
+      advancedRoles: false,
+      auditLog: false,
     },
   },
   pro: {
@@ -23,12 +25,14 @@ export const PLANS = {
     name: 'Pro',
     price: 19,
     color: 'brand',
-    limits: { products: Infinity, categories: Infinity, staff: 3 },
+    limits: { products: Infinity, categories: Infinity, members: 10 },
     features: {
       lowStockAlerts: true,
       csvExport: true,
       reports: true,
       multiLocation: false,
+      advancedRoles: true,
+      auditLog: true,
     },
   },
   business: {
@@ -36,42 +40,45 @@ export const PLANS = {
     name: 'Business',
     price: 49,
     color: 'violet',
-    limits: { products: Infinity, categories: Infinity, staff: Infinity },
+    limits: { products: Infinity, categories: Infinity, members: Infinity },
     features: {
       lowStockAlerts: true,
       csvExport: true,
       reports: true,
       multiLocation: true,
+      advancedRoles: true,
+      auditLog: true,
     },
   },
 };
 
 export function SubscriptionProvider({ children }) {
-  const { user } = useAuth();
+  const { user, hasPermission } = useAuth();
   const [planId, setPlanId] = useState('free');
 
-  // Load plan from Firestore user profile when the user logs in
+  // Load plan from organization document when the user logs in
   useEffect(() => {
-    if (!user?.uid) {
+    if (!user?.organizationId) {
       setPlanId('free');
       return;
     }
-    getUserProfile(user.uid).then((profile) => {
-      if (profile?.planId && PLANS[profile.planId]) {
-        setPlanId(profile.planId);
+    getOrganization(user.organizationId).then((org) => {
+      if (org?.planId && PLANS[org.planId]) {
+        setPlanId(org.planId);
       }
     });
-  }, [user?.uid]);
+  }, [user?.organizationId]);
 
   const plan = PLANS[planId] || PLANS.free;
 
   /**
-   * Upgrade the user's plan and persist to Firestore.
+   * Upgrade the organization's plan (admin only) and persist to Firestore.
    */
   const upgradeTo = async (id) => {
-    if (!PLANS[id] || !user?.uid) return;
+    if (!PLANS[id] || !user?.organizationId) return;
+    if (!hasPermission('billing.manage')) return;
     setPlanId(id);
-    await updateUserProfile(user.uid, { planId: id });
+    await updateOrganization(user.organizationId, { planId: id });
   };
 
   const hasFeature = (feature) => plan.features[feature] ?? false;

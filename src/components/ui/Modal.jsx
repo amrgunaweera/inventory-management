@@ -11,8 +11,8 @@ export default function Modal({ isOpen, onClose, title, children, size = 'md' })
   return (
     <Dialog open={isOpen} onOpenChange={(open) => { if (!open) onClose(); }}>
       <DialogContent className={`${sizes[size]} w-full p-0 gap-0 overflow-hidden bg-white`}>
-        <DialogHeader className="px-6 py-4 border-b border-slate-100 bg-white">
-          <DialogTitle className="text-base font-bold text-slate-800">{title}</DialogTitle>
+        <DialogHeader className="px-6 py-5 border-b border-slate-100 bg-white rounded-t-3xl">
+          <DialogTitle className="text-lg font-semibold text-slate-900">{title}</DialogTitle>
         </DialogHeader>
         <div className="p-6 max-h-[80vh] overflow-y-auto">{children}</div>
       </DialogContent>

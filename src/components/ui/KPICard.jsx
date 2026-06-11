@@ -11,17 +11,17 @@ export default function KPICard({ title, value, sub, icon: Icon, color = 'brand'
   const iconBg = colors[color] || colors.brand;
 
   return (
-    <Card className="hover:shadow-md transition-shadow duration-200">
-      <CardContent className="flex items-start gap-4 p-4">
-        <div className={`w-12 h-12 rounded-xl ${iconBg} shadow-sm flex items-center justify-center flex-shrink-0`}>
+    <Card className="group cursor-default">
+      <CardContent className="flex items-start gap-4">
+        <div className={`w-12 h-12 rounded-2xl ${iconBg} shadow-sm flex items-center justify-center flex-shrink-0 transition-transform duration-300 ease-out group-hover:scale-110 group-hover:rotate-3`}>
           <Icon size={22} />
         </div>
         <div className="flex-1 min-w-0">
-          <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">{title}</p>
-          <p className="text-2xl font-bold mt-0.5 truncate">{value}</p>
-          {sub && <p className="text-xs text-muted-foreground mt-1">{sub}</p>}
+          <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider">{title}</p>
+          <p className="text-2xl font-bold mt-1 truncate text-slate-900">{value}</p>
+          {sub && <p className="text-xs text-slate-400 mt-1">{sub}</p>}
           {trend !== undefined && (
-            <p className={`text-xs font-semibold mt-1 ${trend >= 0 ? 'text-emerald-500' : 'text-red-500'}`}>
+            <p className={`text-xs font-semibold mt-1.5 ${trend >= 0 ? 'text-emerald-500' : 'text-red-500'}`}>
               {trend >= 0 ? '↑' : '↓'} {Math.abs(trend)}% vs last month
             </p>
           )}

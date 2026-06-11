@@ -1,6 +1,6 @@
 /**
  * firestoreService.js
- * Centralized Firestore CRUD helpers for StockSense.
+ * Centralized Firestore CRUD helpers for Smartventory.
  * All data is scoped per-user under: users/{uid}/{collection}
  * This module is reusable for future mobile (iOS/Android) SDK integrations.
  */

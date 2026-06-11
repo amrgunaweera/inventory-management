@@ -40,7 +40,7 @@ export default function Sidebar() {
           <IconBuildingStore size={18} className="text-white" />
         </div>
         <div>
-          <span className="text-white font-bold text-base tracking-tight">StockSense</span>
+          <span className="text-white font-bold text-base tracking-tight">Smartventory</span>
           <span className="block text-slate-500 text-xs leading-none">Inventory Pro</span>
         </div>
       </div>

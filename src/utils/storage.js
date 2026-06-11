@@ -1,4 +1,4 @@
-const PREFIX = 'stocksense_';
+const PREFIX = 'smartventory_';
 
 export const storage = {
   get(key, fallback = null) {

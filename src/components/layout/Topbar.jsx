@@ -19,7 +19,7 @@ export default function Topbar() {
   const { user, logout } = useAuth();
   const { lowStockProducts } = useInventory();
   const { pathname } = useLocation();
-  const page = PAGE_TITLES[pathname] || { title: 'StockSense', sub: '' };
+  const page = PAGE_TITLES[pathname] || { title: 'Smartventory', sub: '' };
 
   return (
     <header className="h-16 bg-white border-b border-slate-100 flex items-center px-6 gap-4">

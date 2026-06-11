@@ -78,7 +78,7 @@ export default function Login() {
           <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-brand-500 to-violet-600 flex items-center justify-center shadow-xl shadow-brand-500/30 mb-4">
             <IconBuildingStore size={28} className="text-white" />
           </div>
-          <h1 className="text-2xl font-bold text-white">StockSense</h1>
+          <h1 className="text-2xl font-bold text-white">Smartventory</h1>
           <p className="text-slate-400 text-sm mt-1">Inventory management for small businesses</p>
         </div>
 
@@ -89,22 +89,20 @@ export default function Login() {
             <button
               type="button"
               onClick={() => switchMode('login')}
-              className={`flex-1 text-sm font-semibold py-2 rounded-lg transition-all duration-200 ${
-                mode === 'login'
+              className={`flex-1 text-sm font-semibold py-2 rounded-lg transition-all duration-200 ${mode === 'login'
                   ? 'bg-brand-500 text-white shadow-lg shadow-brand-500/30'
                   : 'text-slate-400 hover:text-slate-200'
-              }`}
+                }`}
             >
               Sign In
             </button>
             <button
               type="button"
               onClick={() => switchMode('register')}
-              className={`flex-1 text-sm font-semibold py-2 rounded-lg transition-all duration-200 ${
-                mode === 'register'
+              className={`flex-1 text-sm font-semibold py-2 rounded-lg transition-all duration-200 ${mode === 'register'
                   ? 'bg-brand-500 text-white shadow-lg shadow-brand-500/30'
                   : 'text-slate-400 hover:text-slate-200'
-              }`}
+                }`}
             >
               Create Account
             </button>
@@ -226,7 +224,7 @@ export default function Login() {
         </div>
 
         <p className="text-center text-xs text-slate-500 mt-6">
-          © 2024 StockSense · For small businesses & niche retailers
+          © 2026 Smartventory · For businesses & retailers
         </p>
       </div>
     </div>

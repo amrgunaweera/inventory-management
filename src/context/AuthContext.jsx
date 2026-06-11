@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useEffect } from 'react';
+import { createContext, useContext, useState, useEffect, useRef } from 'react';
 import {
   onAuthStateChanged,
   signInWithEmailAndPassword,
@@ -14,10 +14,14 @@ const AuthContext = createContext(null);
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
+  const isRegistering = useRef(false);
 
   // Listen to Firebase Auth state changes
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
+      if (isRegistering.current) {
+        return;
+      }
       if (firebaseUser) {
         // Augment the Firebase user with Firestore profile data
         const profile = await getUserProfile(firebaseUser.uid);
@@ -47,9 +51,11 @@ export function AuthProvider({ children }) {
    */
   const login = async (email, password) => {
     try {
+      setLoading(true);
       await signInWithEmailAndPassword(auth, email, password);
       return { success: true };
     } catch (err) {
+      setLoading(false);
       return { success: false, error: mapAuthError(err.code) };
     }
   };
@@ -59,6 +65,8 @@ export function AuthProvider({ children }) {
    */
   const register = async (email, password, name, store) => {
     try {
+      isRegistering.current = true;
+      setLoading(true);
       const credential = await createUserWithEmailAndPassword(auth, email, password);
       const { uid } = credential.user;
 
@@ -68,8 +76,24 @@ export function AuthProvider({ children }) {
       // Create user document in Firestore
       await createUserProfile(uid, { name, email, store });
 
+      setUser({
+        uid,
+        email,
+        name,
+        store,
+        avatar: name
+          .split(' ')
+          .map((n) => n[0])
+          .join('')
+          .toUpperCase()
+          .slice(0, 2),
+      });
+      setLoading(false);
+      isRegistering.current = false;
       return { success: true };
     } catch (err) {
+      setLoading(false);
+      isRegistering.current = false;
       return { success: false, error: mapAuthError(err.code) };
     }
   };

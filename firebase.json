@@ -1,5 +1,6 @@
 {
   "hosting": {
+    "site": "smartventory",
     "public": "dist",
     "ignore": [
       "firebase.json",

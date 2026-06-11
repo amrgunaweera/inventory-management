@@ -1,5 +1,14 @@
 {
   "projects": {
     "default": "inventory-management-5f438"
+  },
+  "targets": {
+    "inventory-management-5f438": {
+      "hosting": {
+        "smartventory": [
+          "smartventory"
+        ]
+      }
+    }
   }
 }

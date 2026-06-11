@@ -1,46 +1,106 @@
 import { createContext, useContext, useState, useEffect } from 'react';
-import { storage } from '../utils/storage';
+import {
+  onAuthStateChanged,
+  signInWithEmailAndPassword,
+  createUserWithEmailAndPassword,
+  signOut,
+  updateProfile,
+} from 'firebase/auth';
+import { auth } from '../lib/firebase';
+import { createUserProfile, getUserProfile } from '../lib/firestoreService';
 
 const AuthContext = createContext(null);
-
-const DEMO_USER = {
-  id: 'user-1',
-  name: 'Alex Morgan',
-  email: 'alex@stocksense.app',
-  role: 'admin',
-  avatar: 'AM',
-  store: 'The Niche Shop',
-};
 
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
 
+  // Listen to Firebase Auth state changes
   useEffect(() => {
-    const saved = storage.get('auth_user');
-    if (saved) setUser(saved);
-    setLoading(false);
+    const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
+      if (firebaseUser) {
+        // Augment the Firebase user with Firestore profile data
+        const profile = await getUserProfile(firebaseUser.uid);
+        setUser({
+          uid: firebaseUser.uid,
+          email: firebaseUser.email,
+          name: profile?.name || firebaseUser.displayName || 'User',
+          store: profile?.store || 'My Store',
+          avatar: (profile?.name || firebaseUser.displayName || 'U')
+            .split(' ')
+            .map((n) => n[0])
+            .join('')
+            .toUpperCase()
+            .slice(0, 2),
+        });
+      } else {
+        setUser(null);
+      }
+      setLoading(false);
+    });
+
+    return () => unsubscribe();
   }, []);
 
-  const login = (email, password) => {
-    if (email === 'demo@stocksense.app' && password === 'demo1234') {
-      storage.set('auth_user', DEMO_USER);
-      setUser(DEMO_USER);
+  /**
+   * Sign in an existing user with email and password.
+   */
+  const login = async (email, password) => {
+    try {
+      await signInWithEmailAndPassword(auth, email, password);
       return { success: true };
+    } catch (err) {
+      return { success: false, error: mapAuthError(err.code) };
     }
-    return { success: false, error: 'Invalid credentials. Use demo@stocksense.app / demo1234' };
   };
 
-  const logout = () => {
-    storage.remove('auth_user');
-    setUser(null);
+  /**
+   * Register a new user and create their Firestore profile.
+   */
+  const register = async (email, password, name, store) => {
+    try {
+      const credential = await createUserWithEmailAndPassword(auth, email, password);
+      const { uid } = credential.user;
+
+      // Set display name on Firebase Auth profile
+      await updateProfile(credential.user, { displayName: name });
+
+      // Create user document in Firestore
+      await createUserProfile(uid, { name, email, store });
+
+      return { success: true };
+    } catch (err) {
+      return { success: false, error: mapAuthError(err.code) };
+    }
+  };
+
+  /**
+   * Sign out the current user.
+   */
+  const logout = async () => {
+    await signOut(auth);
   };
 
   return (
-    <AuthContext.Provider value={{ user, loading, login, logout }}>
+    <AuthContext.Provider value={{ user, loading, login, register, logout }}>
       {children}
     </AuthContext.Provider>
   );
 }
 
 export const useAuth = () => useContext(AuthContext);
+
+// ─── Error message mapping ────────────────────────────────────────────────────
+function mapAuthError(code) {
+  const errors = {
+    'auth/invalid-credential': 'Invalid email or password. Please try again.',
+    'auth/user-not-found': 'No account found with this email address.',
+    'auth/wrong-password': 'Incorrect password. Please try again.',
+    'auth/email-already-in-use': 'An account with this email already exists.',
+    'auth/weak-password': 'Password must be at least 6 characters.',
+    'auth/invalid-email': 'Please enter a valid email address.',
+    'auth/too-many-requests': 'Too many failed attempts. Please try again later.',
+    'auth/network-request-failed': 'Network error. Check your connection.',
+  };
+  return errors[code] || 'An unexpected error occurred. Please try again.';
+}

@@ -1,5 +1,6 @@
 import { useNavigate } from 'react-router-dom';
 import { IconLock, IconArrowRight } from '@tabler/icons-react';
+import { Button } from './button';
 
 export default function PlanGate({ feature, children }) {
   const navigate = useNavigate();
@@ -21,12 +22,11 @@ export function LockedOverlay({ feature }) {
           Upgrade to unlock it.
         </p>
       </div>
-      <button
+      <Button
         onClick={() => navigate('/billing')}
-        className="btn-primary"
       >
-        Upgrade Plan <IconArrowRight size={16} />
-      </button>
+        Upgrade Plan <IconArrowRight size={16} className="ml-2" />
+      </Button>
     </div>
   );
 }

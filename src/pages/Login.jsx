@@ -2,6 +2,9 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { IconBuildingStore, IconEye, IconEyeOff } from '@tabler/icons-react';
 import { useAuth } from '../context/AuthContext';
+import { Input } from '../components/ui/input';
+import { Label } from '../components/ui/label';
+import { Button } from '../components/ui/button';
 
 export default function Login() {
   const [mode, setMode] = useState('login'); // 'login' | 'register'
@@ -112,28 +115,28 @@ export default function Login() {
             {/* Register-only fields */}
             {mode === 'register' && (
               <>
-                <div>
-                  <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wide mb-1.5">
+                <div className="space-y-1">
+                  <Label className="text-xs font-semibold text-slate-400 uppercase tracking-wide">
                     Full Name
-                  </label>
-                  <input
+                  </Label>
+                  <Input
                     type="text"
                     value={name}
                     onChange={(e) => setName(e.target.value)}
-                    className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2.5 text-sm text-white placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-brand-500/50 focus:border-brand-400 transition-all"
+                    className="w-full bg-white/5 border-white/10 text-white placeholder:text-slate-500"
                     placeholder="Alex Morgan"
                     required
                   />
                 </div>
-                <div>
-                  <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wide mb-1.5">
+                <div className="space-y-1">
+                  <Label className="text-xs font-semibold text-slate-400 uppercase tracking-wide">
                     Store Name
-                  </label>
-                  <input
+                  </Label>
+                  <Input
                     type="text"
                     value={store}
                     onChange={(e) => setStore(e.target.value)}
-                    className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2.5 text-sm text-white placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-brand-500/50 focus:border-brand-400 transition-all"
+                    className="w-full bg-white/5 border-white/10 text-white placeholder:text-slate-500"
                     placeholder="The Niche Shop"
                     required
                   />
@@ -142,31 +145,31 @@ export default function Login() {
             )}
 
             {/* Email */}
-            <div>
-              <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wide mb-1.5">
+            <div className="space-y-1">
+              <Label className="text-xs font-semibold text-slate-400 uppercase tracking-wide">
                 Email Address
-              </label>
-              <input
+              </Label>
+              <Input
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2.5 text-sm text-white placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-brand-500/50 focus:border-brand-400 transition-all"
+                className="w-full bg-white/5 border-white/10 text-white placeholder:text-slate-500"
                 placeholder="you@example.com"
                 required
               />
             </div>
 
             {/* Password */}
-            <div>
-              <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wide mb-1.5">
+            <div className="space-y-1">
+              <Label className="text-xs font-semibold text-slate-400 uppercase tracking-wide">
                 Password
-              </label>
+              </Label>
               <div className="relative">
-                <input
+                <Input
                   type={showPw ? 'text' : 'password'}
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2.5 pr-10 text-sm text-white placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-brand-500/50 focus:border-brand-400 transition-all"
+                  className="w-full bg-white/5 border-white/10 text-white placeholder:text-slate-500 pr-10"
                   placeholder="••••••••"
                   required
                 />
@@ -182,15 +185,15 @@ export default function Login() {
 
             {/* Confirm Password (register only) */}
             {mode === 'register' && (
-              <div>
-                <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wide mb-1.5">
+              <div className="space-y-1">
+                <Label className="text-xs font-semibold text-slate-400 uppercase tracking-wide">
                   Confirm Password
-                </label>
-                <input
+                </Label>
+                <Input
                   type={showPw ? 'text' : 'password'}
                   value={confirmPassword}
                   onChange={(e) => setConfirmPassword(e.target.value)}
-                  className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2.5 text-sm text-white placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-brand-500/50 focus:border-brand-400 transition-all"
+                  className="w-full bg-white/5 border-white/10 text-white placeholder:text-slate-500"
                   placeholder="••••••••"
                   required
                 />
@@ -199,16 +202,16 @@ export default function Login() {
 
             {/* Error */}
             {error && (
-              <div className="bg-red-500/10 border border-red-500/20 rounded-lg px-4 py-3">
-                <p className="text-xs text-red-400">{error}</p>
+              <div className="bg-destructive/10 border border-destructive/20 rounded-lg px-4 py-3">
+                <p className="text-xs text-destructive-foreground">{error}</p>
               </div>
             )}
 
             {/* Submit */}
-            <button
+            <Button
               type="submit"
               disabled={loading}
-              className="w-full bg-gradient-to-r from-brand-500 to-brand-600 hover:from-brand-600 hover:to-brand-700 text-white font-semibold py-3 rounded-xl transition-all duration-200 shadow-lg shadow-brand-500/20 disabled:opacity-60 text-sm mt-2"
+              className="w-full bg-gradient-to-r from-brand-500 to-brand-600 hover:from-brand-600 hover:to-brand-700 text-white py-6 mt-4 text-sm"
             >
               {loading ? (
                 <span className="flex items-center justify-center gap-2">
@@ -219,7 +222,7 @@ export default function Login() {
                   {mode === 'login' ? 'Signing in…' : 'Creating account…'}
                 </span>
               ) : mode === 'login' ? 'Sign In' : 'Create Account'}
-            </button>
+            </Button>
           </form>
         </div>
 

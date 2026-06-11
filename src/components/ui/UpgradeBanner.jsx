@@ -1,5 +1,6 @@
 import { useNavigate } from 'react-router-dom';
 import { IconArrowRight, IconSparkles } from '@tabler/icons-react';
+import { Button } from './button';
 
 export default function UpgradeBanner({ message = 'Upgrade to Pro to unlock this feature.' }) {
   const navigate = useNavigate();
@@ -9,12 +10,12 @@ export default function UpgradeBanner({ message = 'Upgrade to Pro to unlock this
         <IconSparkles size={16} className="text-brand-500" />
       </div>
       <p className="text-sm text-slate-700 flex-1">{message}</p>
-      <button
+      <Button
         onClick={() => navigate('/billing')}
-        className="btn-primary flex-shrink-0 text-xs py-1.5"
+        className="flex-shrink-0 h-8 text-xs"
       >
-        Upgrade <IconArrowRight size={14} />
-      </button>
+        Upgrade <IconArrowRight size={14} className="ml-1" />
+      </Button>
     </div>
   );
 }

@@ -1,3 +1,4 @@
+import { Button } from "@/components/ui/button";
 import { IconFileExport, IconDownload, IconCheck } from '@tabler/icons-react';
 import { useState } from 'react';
 import { LockedOverlay } from '../components/ui/PlanGate';
@@ -5,6 +6,7 @@ import { useSubscription } from '../context/SubscriptionContext';
 import { useInventory } from '../context/InventoryContext';
 import { exportCSV } from '../utils/exportCSV';
 import { useAuth } from '../context/AuthContext';
+
 
 const EXPORT_OPTIONS = [
   { id: 'products', label: 'Products', description: 'Full product catalog with pricing and stock', icon: '📦' },
@@ -19,21 +21,21 @@ export default function Export() {
   const { user } = useAuth();
   const [exported, setExported] = useState(null);
 
-  if (!hasFeature('csvExport')) return <LockedOverlay feature="csvExport" />;
+  if (!hasFeature('csvExport')) return <LockedOverlay feature='csvExport' />;
 
   const handleExport = (type) => {
     switch (type) {
-      case 'products':
-        exportCSV(products.map(p => ({ name: p.name, sku: p.sku, category: p.category, price: p.price, cost: p.cost, stock: p.stock, minStock: p.minStock, status: p.status })), 'products.csv');
+      case'products':
+        exportCSV(products.map(p => ({ name: p.name, sku: p.sku, category: p.category, price: p.price, cost: p.cost, stock: p.stock, minStock: p.minStock, status: p.status })),'products.csv');
         break;
-      case 'categories':
-        exportCSV(categories.map(c => ({ name: c.name, description: c.description })), 'categories.csv');
+      case'categories':
+        exportCSV(categories.map(c => ({ name: c.name, description: c.description })),'categories.csv');
         break;
-      case 'orders':
-        exportCSV(orders.map(o => ({ id: o.id, type: o.type, customer: o.customer, total: o.total, status: o.status, date: o.date })), 'orders.csv');
+      case'orders':
+        exportCSV(orders.map(o => ({ id: o.id, type: o.type, customer: o.customer, total: o.total, status: o.status, date: o.date })),'orders.csv');
         break;
-      case 'low_stock':
-        exportCSV(lowStockProducts.map(p => ({ name: p.name, sku: p.sku, stock: p.stock, minStock: p.minStock, category: p.category })), 'low_stock_report.csv');
+      case'low_stock':
+        exportCSV(lowStockProducts.map(p => ({ name: p.name, sku: p.sku, stock: p.stock, minStock: p.minStock, category: p.category })),'low_stock_report.csv');
         break;
     }
     setExported(type);
@@ -60,8 +62,7 @@ export default function Export() {
                 <p className="font-semibold text-slate-800 text-sm">{opt.label}</p>
                 <p className="text-xs text-slate-400 mt-0.5">{opt.description}</p>
               </div>
-              <button
-                onClick={() => handleExport(opt.id)}
+              <Button variant="ghost" onClick={() => handleExport(opt.id)}
                 className={`flex-shrink-0 flex items-center gap-1.5 px-4 py-2 rounded-lg text-xs font-semibold transition-all duration-200 ${
                   exported === opt.id
                     ? 'bg-emerald-100 text-emerald-700'
@@ -73,7 +74,7 @@ export default function Export() {
                 ) : (
                   <><IconDownload size={14} /> Export</>
                 )}
-              </button>
+              </Button>
             </div>
           ))}
         </div>

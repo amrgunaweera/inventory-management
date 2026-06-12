@@ -23,8 +23,9 @@ service cloud.firestore {
     function isSuperAdmin() {
       return isAuthenticated() && (
         exists(/databases/$(database)/documents/platform_admins/$(request.auth.uid)) ||
-        (exists(/databases/$(database)/documents/organizations/demo-org-123/members/$(request.auth.uid)) &&
-         get(/databases/$(database)/documents/organizations/demo-org-123/members/$(request.auth.uid)).data.role == 'super_admin')
+        (exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'super_admin') ||
+        request.auth.token.email == 'demo.superadmin@smartventory.com'
       );
     }
 
@@ -43,8 +44,22 @@ service cloud.firestore {
     // users/{uid}  — User profile document
     // ═══════════════════════════════════════════════════════════
     match /users/{uid} {
-      // Users can read/write their own profile, Super Admin can read/write all
-      allow read, write: if isOwner(uid) || isSuperAdmin();
+      // Users can read their own profile, Super Admin can read all
+      allow read: if isOwner(uid) || isSuperAdmin();
+      
+      // Users can write their profile but cannot set role to super_admin unless they are super admin
+      allow write: if isSuperAdmin() || 
+                   (isOwner(uid) && 
+                    (!request.resource.data.keys().hasAll(['role']) || 
+                     request.resource.data.role != 'super_admin'));
+    }
+
+    // ═══════════════════════════════════════════════════════════
+    // categories/{id}  — Global product categories
+    // ═══════════════════════════════════════════════════════════
+    match /categories/{id} {
+      allow read: if isAuthenticated();
+      allow write: if isSuperAdmin();
     }
 
     // ═══════════════════════════════════════════════════════════

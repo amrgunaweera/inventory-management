@@ -1,3 +1,4 @@
+import { Button } from "@/components/ui/button";
 import { useState, useEffect } from 'react';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -18,23 +19,25 @@ import Modal from '../components/ui/Modal';
 import { Badge } from '../components/ui/Badge';
 import { Input } from '../components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select';
+import { getRoleColorClasses, ROLES } from '../lib/roles';
+
 
 const createUserSchema = z.object({
   name: z.string().optional(),
-  email: z.string().email({ message: "Invalid email address" }),
-  password: z.string().min(6, { message: "Password must be at least 6 characters" }),
-  role: z.enum(['store_owner', 'store_sales_person', 'super_admin']),
+  email: z.string().email({ message: 'Invalid email address' }),
+  password: z.string().min(6, { message: 'Password must be at least 6 characters' }),
+  role: z.enum(['store_owner','store_sales_person','super_admin']),
   orgId: z.string().optional()
 });
 
 const editUserSchema = z.object({
-  name: z.string().min(1, { message: "Name is required" }),
-  email: z.string().email({ message: "Invalid email address" }),
+  name: z.string().min(1, { message: 'Name is required' }),
+  email: z.string().email({ message: 'Invalid email address' }),
 });
 
 const assignStoreSchema = z.object({
   orgId: z.string().optional(),
-  role: z.enum(['store_owner', 'store_sales_person']).optional(),
+  role: z.enum(['store_owner','store_sales_person']).optional(),
 });
 
 export default function PlatformUsers() {
@@ -90,7 +93,7 @@ export default function PlatformUsers() {
 
   useEffect(() => {
     if (createRole === 'super_admin') {
-      setCreateValue('orgId', '');
+      setCreateValue('orgId','');
     }
   }, [createRole, setCreateValue]);
 
@@ -218,17 +221,10 @@ export default function PlatformUsers() {
           <p className="text-xs text-slate-400 mt-0.5">Global view of all registered users across all organizations.</p>
         </div>
         <div className="flex items-center gap-3">
-          <button
-            type="button"
-            onClick={() => setIsCreateOpen(true)}
-            className="btn-primary"
+          <Button type="button" onClick={() => setIsCreateOpen(true)} variant="default" 
           >
             <IconPlus size={16} /> Create User
-          </button>
-          <div className="flex gap-2 items-center text-sm font-medium text-slate-600 bg-white px-4 py-2 rounded-md border border-slate-100 shadow-sm">
-            <IconUsers size={16} className="text-brand-500" />
-            {users.length} Total Users
-          </div>
+          </Button>
         </div>
       </div>
 
@@ -302,6 +298,11 @@ export default function PlatformUsers() {
                       <div className="min-w-0 flex flex-col gap-0.5">
                         <div className="flex items-center gap-2">
                           <p className="font-medium text-slate-800 truncate">{u.name || 'Unnamed User'}</p>
+                          {u.role && (
+                            <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider border ${getRoleColorClasses(u.role)}`}>
+                              {ROLES[u.role]?.label || u.role}
+                            </span>
+                          )}
                           {u.status === 'disabled' && (
                             <span className="px-2 py-0.5 rounded-full bg-rose-100 text-rose-700 text-[10px] font-bold uppercase tracking-wider">Disabled</span>
                           )}
@@ -311,7 +312,9 @@ export default function PlatformUsers() {
                     </div>
                   </td>
                   <td className="px-5 py-4">
-                    {u.organizationId ? (
+                    {u.role === 'super_admin' ? (
+                      <span className="text-xs text-slate-400 italic font-semibold">N/A (System Admin)</span>
+                    ) : u.organizationId ? (
                       <span className="font-mono text-xs text-slate-600 bg-slate-100 px-2 py-1 rounded">
                         {u.organizationId}
                       </span>
@@ -324,31 +327,27 @@ export default function PlatformUsers() {
                   </td>
                   <td className="px-5 py-4 text-right">
                     <div className="flex items-center justify-end gap-2">
-                      <button
-                        type="button"
-                        onClick={() => handleAssignOpen(u)}
-                        className="text-slate-400 hover:text-violet-500 transition-colors p-1"
-                        title="Assign to Store"
-                      >
-                        <IconBuildingStore size={16} />
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => handleEditOpen(u)}
+                      {u.role !== 'super_admin' && (
+                        <Button variant="ghost" type="button" onClick={() => handleAssignOpen(u)}
+                          className="text-slate-400 hover:text-violet-500 transition-colors p-1"
+                          title="Assign to Store"
+                        >
+                          <IconBuildingStore size={16} />
+                        </Button>
+                      )}
+                      <Button variant="ghost" type="button" onClick={() => handleEditOpen(u)}
                         className="text-slate-400 hover:text-brand-500 transition-colors p-1"
                         title="Edit user profile"
                       >
                         <IconEdit size={16} />
-                      </button>
+                      </Button>
                       {u.uid !== user.uid && u.status !== 'disabled' && (
-                        <button
-                          type="button"
-                          onClick={() => setRemoveConfirm(u)}
+                        <Button variant="ghost" type="button" onClick={() => setRemoveConfirm(u)}
                           className="text-slate-400 hover:text-red-500 transition-colors p-1"
                           title="Deactivate user profile"
                         >
                           <IconTrash size={16} />
-                        </button>
+                        </Button>
                       )}
                     </div>
                   </td>
@@ -367,8 +366,8 @@ export default function PlatformUsers() {
         size="sm"
         footer={
           <>
-            <button type="button" onClick={() => setEditUser(null)} className="btn-secondary">Cancel</button>
-            <button type="submit" form="edit-user-form" className="btn-primary" disabled={isEditing}>Save Changes</button>
+            <Button type="button" onClick={() => setEditUser(null)} variant="outline" >Cancel</Button>
+            <Button variant="default" type="submit" form="edit-user-form" disabled={isEditing}>Save Changes</Button>
           </>
         }
       >
@@ -394,10 +393,10 @@ export default function PlatformUsers() {
         size="sm"
         footer={
           <>
-            <button type="button" onClick={() => setAssignTarget(null)} className="btn-secondary" disabled={isAssigning}>Cancel</button>
-            <button type="submit" form="assign-store-form" className="btn-primary" disabled={isAssigning}>
+            <Button type="button" onClick={() => setAssignTarget(null)} variant="outline"  disabled={isAssigning}>Cancel</Button>
+            <Button variant="default" type="submit" form="assign-store-form" disabled={isAssigning}>
               {isAssigning ? 'Assigning...' : 'Assign User'}
-            </button>
+            </Button>
           </>
         }
       >
@@ -468,20 +467,14 @@ export default function PlatformUsers() {
         }
         footer={
           <>
-            <button
-              onClick={() => setRemoveConfirm(null)}
-              className="btn-secondary"
+            <Button onClick={() => setRemoveConfirm(null)} variant="outline" 
               disabled={deleting}
             >
               Cancel
-            </button>
-            <button
-              onClick={handleDeactivate}
-              className="btn-danger"
-              disabled={deleting}
-            >
+            </Button>
+            <Button variant="destructive" onClick={handleDeactivate} disabled={deleting} >
               {deleting ? 'Deactivating...' : 'Deactivate'}
-            </button>
+            </Button>
           </>
         }
       >
@@ -498,10 +491,10 @@ export default function PlatformUsers() {
         size="sm"
         footer={
           <>
-            <button type="button" onClick={() => setIsCreateOpen(false)} className="btn-secondary" disabled={isCreating}>Cancel</button>
-            <button type="submit" form="create-user-form" className="btn-primary" disabled={isCreating}>
+            <Button type="button" onClick={() => setIsCreateOpen(false)} variant="outline"  disabled={isCreating}>Cancel</Button>
+            <Button variant="default" type="submit" form="create-user-form" disabled={isCreating}>
               {isCreating ? 'Creating...' : 'Create User'}
-            </button>
+            </Button>
           </>
         }
       >

@@ -57,6 +57,7 @@ export async function createUserProfile(uid, data) {
     name: data.name || '',
     email: data.email || '',
     organizationId: data.organizationId || null,
+    role: data.role || null,
     createdAt: serverTimestamp(),
     updatedAt: serverTimestamp(),
   });
@@ -131,12 +132,11 @@ export async function createUserByAdmin({ name, email, password, orgId, role }) 
     // 3. Write user profile and store assignment in Firestore using main db (batch)
     const batch = writeBatch(db);
     
-    // If role is super_admin, we default to the demo org (demo-org-123) so they have membership details loaded properly
     let finalOrgId = orgId || null;
     let finalRole = role || null;
     
     if (role === 'super_admin') {
-      finalOrgId = 'demo-org-123';
+      finalOrgId = null;
       finalRole = 'super_admin';
     }
     
@@ -146,6 +146,7 @@ export async function createUserByAdmin({ name, email, password, orgId, role }) 
       name: name || '',
       email: email || '',
       organizationId: finalOrgId,
+      role: finalRole,
       createdAt: serverTimestamp(),
       updatedAt: serverTimestamp(),
     });
@@ -423,16 +424,16 @@ export async function deleteProduct(orgId, productId) {
 
 // ─── Categories ───────────────────────────────────────────────────────────────
 
-export function subscribeToCategories(orgId, callback) {
-  const q = query(orgColRef(orgId, 'categories'), orderBy('createdAt', 'asc'));
+export function subscribeToCategories(callback) {
+  const q = query(collection(db, 'categories'), orderBy('createdAt', 'asc'));
   return onSnapshot(q, (snap) => {
     const categories = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
     callback(categories);
   });
 }
 
-export async function addCategory(orgId, category) {
-  const ref = await addDoc(orgColRef(orgId, 'categories'), {
+export async function addCategory(category) {
+  const ref = await addDoc(collection(db, 'categories'), {
     ...category,
     productCount: 0,
     createdAt: serverTimestamp(),
@@ -441,15 +442,15 @@ export async function addCategory(orgId, category) {
   return ref.id;
 }
 
-export async function updateCategory(orgId, categoryId, updates) {
-  await updateDoc(orgDocRef(orgId, 'categories', categoryId), {
+export async function updateCategory(categoryId, updates) {
+  await updateDoc(doc(db, 'categories', categoryId), {
     ...updates,
     updatedAt: serverTimestamp(),
   });
 }
 
-export async function deleteCategory(orgId, categoryId) {
-  await deleteDoc(orgDocRef(orgId, 'categories', categoryId));
+export async function deleteCategory(categoryId) {
+  await deleteDoc(doc(db, 'categories', categoryId));
 }
 
 // ─── Orders ───────────────────────────────────────────────────────────────────
@@ -577,11 +578,6 @@ export async function seedOrgData(orgId, { products, categories, orders }) {
     const ref = doc(orgColRef(orgId, 'products'));
     batch.set(ref, { ...rest, createdAt: now, updatedAt: now });
   }
-  for (const c of categories) {
-    const { id: _id, ...rest } = c;
-    const ref = doc(orgColRef(orgId, 'categories'));
-    batch.set(ref, { ...rest, createdAt: now, updatedAt: now });
-  }
   for (const o of orders) {
     const { id: _id, ...rest } = o;
     const ref = doc(orgColRef(orgId, 'orders'));
@@ -603,26 +599,28 @@ export async function hasExistingProducts(orgId) {
  * Setup a shared demo organization workspace and link a demo user as a member with their assigned role.
  */
 export async function setupDemoMember(uid, { email, name, role }) {
-  const orgId = 'demo-org-123';
+  const orgId = role === 'super_admin' ? null : 'demo-org-123';
 
-  // 1. Ensure the demo organization document exists
-  // This might fail if it already exists and the current user is not an admin.
-  // We swallow the error because the organization is already set up.
-  try {
-    const orgRef_ = doc(db, 'organizations', orgId);
-    await setDoc(orgRef_, {
-      name: 'Demo Corporation',
-      ownerId: uid, // Can be set to the registering user
-      planId: 'business', // Business plan unlocks all features (e.g. warehouses)
-      settings: {
-        currency: 'USD',
-        timezone: 'UTC',
-      },
-      createdAt: serverTimestamp(),
-      updatedAt: serverTimestamp(),
-    }, { merge: true });
-  } catch (err) {
-    console.log("Skipping demo org update (likely already exists and user is not admin):", err);
+  if (orgId) {
+    // 1. Ensure the demo organization document exists
+    // This might fail if it already exists and the current user is not an admin.
+    // We swallow the error because the organization is already set up.
+    try {
+      const orgRef_ = doc(db, 'organizations', orgId);
+      await setDoc(orgRef_, {
+        name: 'Demo Corporation',
+        ownerId: uid, // Can be set to the registering user
+        planId: 'business', // Business plan unlocks all features (e.g. warehouses)
+        settings: {
+          currency: 'USD',
+          timezone: 'UTC',
+        },
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp(),
+      }, { merge: true });
+    } catch (err) {
+      console.log("Skipping demo org update (likely already exists and user is not admin):", err);
+    }
   }
 
   const batch = writeBatch(db);
@@ -634,20 +632,23 @@ export async function setupDemoMember(uid, { email, name, role }) {
     name,
     email,
     organizationId: orgId,
+    role,
     createdAt: serverTimestamp(),
     updatedAt: serverTimestamp(),
   }, { merge: true });
 
   // 3. Set membership and role details
-  const memRef = doc(db, 'organizations', orgId, 'members', uid);
-  batch.set(memRef, {
-    uid,
-    name,
-    email,
-    role,
-    joinedAt: serverTimestamp(),
-    invitedBy: null,
-  }, { merge: true });
+  if (orgId) {
+    const memRef = doc(db, 'organizations', orgId, 'members', uid);
+    batch.set(memRef, {
+      uid,
+      name,
+      email,
+      role,
+      joinedAt: serverTimestamp(),
+      invitedBy: null,
+    }, { merge: true });
+  }
 
   await batch.commit();
 }
@@ -706,6 +707,10 @@ export async function assignUserToStore(uid, orgId, role = 'store_owner') {
   const profile = await getUserProfile(uid);
   const oldOrgId = profile?.organizationId;
 
+  if (profile?.role === 'super_admin') {
+    throw new Error('Super Admin cannot be assigned to an organization.');
+  }
+
   const batch = writeBatch(db);
 
   if (oldOrgId) {
@@ -725,11 +730,13 @@ export async function assignUserToStore(uid, orgId, role = 'store_owner') {
 
     batch.update(doc(db, 'users', uid), {
       organizationId: orgId,
+      role: role,
       updatedAt: serverTimestamp(),
     });
   } else {
     batch.update(doc(db, 'users', uid), {
       organizationId: null,
+      role: null,
       updatedAt: serverTimestamp(),
     });
   }

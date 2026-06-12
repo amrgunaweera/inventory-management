@@ -1,13 +1,14 @@
+import { Button } from "@/components/ui/button";
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { IconBuildingStore, IconEye, IconEyeOff } from '@tabler/icons-react';
 import { useAuth } from '../context/AuthContext';
 import { Input } from '../components/ui/input';
 import { Label } from '../components/ui/label';
-import { Button } from '../components/ui/button';
+import { getDefaultRoute } from '../lib/roles';
 
 export default function Login() {
-  const [mode, setMode] = useState('login'); // 'login' | 'register'
+  const [mode, setMode] = useState('login'); //'login' |'register'
 
   // Login fields
   const [email, setEmail] = useState('');
@@ -28,7 +29,7 @@ export default function Login() {
 
   useEffect(() => {
     if (user) {
-      navigate('/dashboard', { replace: true });
+      navigate(getDefaultRoute(user.role), { replace: true });
     }
   }, [user, navigate]);
 
@@ -95,7 +96,7 @@ export default function Login() {
     };
 
     const targetUser = demoUsers[roleKey];
-    const demoPassword = 'demoPassword123';
+    const demoPassword ="demoPassword123";
 
     try {
       // 1. Try signing in (user already exists)
@@ -148,26 +149,22 @@ export default function Login() {
         <div className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl p-8">
           {/* Tab switcher */}
           <div className="flex bg-white/5 rounded-xl p-1 mb-6">
-            <button
-              type="button"
-              onClick={() => switchMode('login')}
+            <Button variant="ghost" type="button" onClick={() => switchMode('login')}
               className={`flex-1 text-sm font-semibold py-2 rounded-lg transition-all duration-200 ${mode === 'login'
                   ? 'bg-brand-500 text-white shadow-lg shadow-brand-500/30'
                   : 'text-slate-400 hover:text-slate-200'
                 }`}
             >
               Sign In
-            </button>
-            <button
-              type="button"
-              onClick={() => switchMode('register')}
+            </Button>
+            <Button variant="ghost" type="button" onClick={() => switchMode('register')}
               className={`flex-1 text-sm font-semibold py-2 rounded-lg transition-all duration-200 ${mode === 'register'
                   ? 'bg-brand-500 text-white shadow-lg shadow-brand-500/30'
                   : 'text-slate-400 hover:text-slate-200'
                 }`}
             >
               Create Account
-            </button>
+            </Button>
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-4">
@@ -235,13 +232,11 @@ export default function Login() {
                   placeholder="••••••••"
                   required
                 />
-                <button
-                  type="button"
-                  onClick={() => setShowPw((v) => !v)}
+                <Button variant="ghost" type="button" onClick={() => setShowPw((v) => !v)}
                   className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-200"
                 >
                   {showPw ? <IconEyeOff size={16} /> : <IconEye size={16} />}
-                </button>
+                </Button>
               </div>
             </div>
 
@@ -295,33 +290,24 @@ export default function Login() {
               </span>
             </div>
             <div className="grid grid-cols-1 gap-2">
-              <button
-                type="button"
-                disabled={loading}
-                onClick={() => handleDemoLogin('super_admin')}
+              <Button variant="ghost" type="button" disabled={loading} onClick={() => handleDemoLogin('super_admin')}
                 className="flex items-center justify-between text-left p-3 rounded-lg bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/20 transition text-sm font-semibold text-rose-300 disabled:opacity-50"
               >
                 <span>Super Admin</span>
                 {loadingTarget === 'super_admin' && <div className="w-4 h-4 border-2 border-rose-500/30 border-t-rose-500 rounded-full animate-spin" />}
-              </button>
-              <button
-                type="button"
-                disabled={loading}
-                onClick={() => handleDemoLogin('store_owner')}
+              </Button>
+              <Button variant="ghost" type="button" disabled={loading} onClick={() => handleDemoLogin('store_owner')}
                 className="flex items-center justify-between text-left p-3 rounded-lg bg-brand-500/10 hover:bg-brand-500/20 border border-brand-500/20 transition text-sm font-semibold text-brand-300 disabled:opacity-50"
               >
                 <span>Store Owner</span>
                 {loadingTarget === 'store_owner' && <div className="w-4 h-4 border-2 border-brand-500/30 border-t-brand-500 rounded-full animate-spin" />}
-              </button>
-              <button
-                type="button"
-                disabled={loading}
-                onClick={() => handleDemoLogin('store_sales_person')}
+              </Button>
+              <Button variant="ghost" type="button" disabled={loading} onClick={() => handleDemoLogin('store_sales_person')}
                 className="flex items-center justify-between text-left p-3 rounded-lg bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/20 transition text-sm font-semibold text-emerald-300 disabled:opacity-50"
               >
                 <span>Store Sales Person</span>
                 {loadingTarget === 'store_sales_person' && <div className="w-4 h-4 border-2 border-emerald-500/30 border-t-emerald-500 rounded-full animate-spin" />}
-              </button>
+              </Button>
             </div>
           </div>
         </div>

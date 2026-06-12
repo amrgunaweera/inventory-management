@@ -1,3 +1,4 @@
+import { Button } from "@/components/ui/button";
 import { IconAlertTriangle, IconPackage, IconRefresh } from '@tabler/icons-react';
 import { LockedOverlay } from '../components/ui/PlanGate';
 import { Badge } from '../components/ui/Badge';
@@ -5,12 +6,13 @@ import { useSubscription } from '../context/SubscriptionContext';
 import { useInventory } from '../context/InventoryContext';
 import { useNavigate } from 'react-router-dom';
 
+
 export default function Alerts() {
   const { hasFeature } = useSubscription();
   const { lowStockProducts, products, updateProduct } = useInventory();
   const navigate = useNavigate();
 
-  if (!hasFeature('lowStockAlerts')) return <LockedOverlay feature="lowStockAlerts" />;
+  if (!hasFeature('lowStockAlerts')) return <LockedOverlay feature='lowStockAlerts' />;
 
   const outOfStock = products.filter(p => p.stock === 0 && p.status === 'active');
   const belowMin = products.filter(p => p.stock > 0 && p.stock <= p.minStock && p.status === 'active');
@@ -81,12 +83,10 @@ export default function Alerts() {
                       </Badge>
                     </td>
                     <td className="px-4 py-3 text-right">
-                      <button
-                        onClick={() => navigate('/orders')}
-                        className="btn-secondary py-1 px-3 text-xs flex items-center gap-1.5 ml-auto"
+                      <Button onClick={() => navigate('/orders')} variant="outline" className="py-1 px-3 text-xs flex items-center gap-1.5 ml-auto"
                       >
                         <IconRefresh size={13} /> Reorder
-                      </button>
+                      </Button>
                     </td>
                   </tr>
                 ))}

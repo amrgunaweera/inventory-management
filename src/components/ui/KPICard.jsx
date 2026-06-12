@@ -13,7 +13,7 @@ export default function KPICard({ title, value, sub, icon: Icon, color = 'brand'
   return (
     <Card className="group cursor-default shadow-framer-sm hover:shadow-framer hover:-translate-y-0.5">
       <CardContent className="flex items-start gap-4">
-        <div className={`w-12 h-12 rounded-2xl ${iconBg} shadow-sm flex items-center justify-center flex-shrink-0 transition-transform duration-300 ease-out group-hover:scale-110 group-hover:rotate-3`}>
+        <div className={`w-12 h-12 rounded-lg ${iconBg} shadow-sm flex items-center justify-center flex-shrink-0 transition-transform duration-300 ease-out group-hover:scale-110 group-hover:rotate-3`}>
           <Icon size={22} />
         </div>
         <div className="flex-1 min-w-0">

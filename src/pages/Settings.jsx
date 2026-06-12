@@ -1,8 +1,10 @@
+import { Button } from "@/components/ui/button";
 import { useState } from 'react';
 import { IconDeviceFloppy, IconCheck } from '@tabler/icons-react';
 import { useAuth } from '../context/AuthContext';
 import { Input } from '../components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select';
+
 
 export default function Settings() {
   const { user, hasPermission } = useAuth();
@@ -111,24 +113,22 @@ export default function Settings() {
                   <p className="text-sm font-medium text-slate-700">{item.label}</p>
                   <p className="text-xs text-slate-400">{item.desc}</p>
                 </div>
-                <button
-                  type="button"
-                  onClick={() => setForm(f => ({ ...f, [item.key]: !f[item.key] }))}
+                <Button variant="ghost" type="button" onClick={() => setForm(f => ({ ...f, [item.key]: !f[item.key] }))}
                   className={`relative w-10 h-5.5 rounded-full transition-colors duration-200 flex-shrink-0 ${form[item.key] ? 'bg-brand-500' : 'bg-slate-200'}`}
                   style={{ height: '22px', width: '40px' }}
                 >
                   <span className={`absolute top-0.5 left-0.5 w-4.5 h-4.5 bg-white rounded-full shadow transition-transform duration-200 ${form[item.key] ? 'translate-x-4.5' : ''}`}
                     style={{ width: '18px', height: '18px', transform: form[item.key] ? 'translateX(18px)' : 'translateX(0)' }}
                   />
-                </button>
+                </Button>
               </div>
             ))}
           </div>
         </div>
 
-        <button type="submit" className="btn-primary">
+        <Button variant="default" type="submit" >
           {saved ? <><IconCheck size={16} /> Saved!</> : <><IconDeviceFloppy size={16} /> Save Settings</>}
-        </button>
+        </Button>
       </form>
     </div>
   );

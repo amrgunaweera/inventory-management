@@ -1,6 +1,9 @@
+import { Button } from "@/components/ui/button";
 import { useNavigate } from 'react-router-dom';
 import { IconShieldOff, IconArrowLeft, IconHome } from '@tabler/icons-react';
 import { useAuth } from '../context/AuthContext';
+import { getDefaultRoute } from '../lib/roles';
+
 
 export default function AccessDenied() {
   const { user } = useAuth();
@@ -29,20 +32,16 @@ export default function AccessDenied() {
 
         {/* Actions */}
         <div className="flex items-center justify-center gap-3">
-          <button
-            onClick={() => navigate(-1)}
-            className="btn-secondary inline-flex items-center gap-2"
+          <Button onClick={() => navigate(-1)} variant="outline" className="inline-flex items-center gap-2"
           >
             <IconArrowLeft size={16} />
             Go Back
-          </button>
-          <button
-            onClick={() => navigate('/dashboard')}
-            className="btn-primary inline-flex items-center gap-2"
+          </Button>
+          <Button onClick={() => navigate(user ? getDefaultRoute(user.role) : '/login')} variant="default" className="inline-flex items-center gap-2"
           >
             <IconHome size={16} />
             Dashboard
-          </button>
+          </Button>
         </div>
 
         {/* Help text */}

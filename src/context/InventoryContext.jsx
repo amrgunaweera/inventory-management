@@ -49,6 +49,8 @@ export function InventoryProvider({ children }) {
       return;
     }
 
+    const unsubCategories = subscribeToCategories(setCategories);
+
     if (role === 'super_admin') {
       setDbLoading(true);
       let activeUnsubs = [];
@@ -100,6 +102,7 @@ export function InventoryProvider({ children }) {
       return () => {
         unsubOrgs();
         activeUnsubs.forEach(unsub => unsub());
+        unsubCategories();
       };
     } else {
       // Normal non-admin user flow
@@ -129,7 +132,6 @@ export function InventoryProvider({ children }) {
         setProducts(data);
         setDbLoading(false);
       });
-      const unsubCategories = subscribeToCategories(orgId, setCategories);
       const unsubOrders = subscribeToOrders(orgId, setOrders);
       const unsubSuppliers = subscribeToSuppliers(orgId, setSuppliers);
 
@@ -182,20 +184,20 @@ export function InventoryProvider({ children }) {
 
   const addCategory = async (cat) => {
     if (!hasPermission('categories.create')) throw new Error('Permission denied');
-    const id = await fsAddCategory(orgId, cat);
+    const id = await fsAddCategory(cat);
     await logAction('category.created', `Created category: ${cat.name}`);
     return { ...cat, id };
   };
 
   const updateCategory = async (id, updates) => {
     if (!hasPermission('categories.edit')) throw new Error('Permission denied');
-    await fsUpdateCategory(orgId, id, updates);
+    await fsUpdateCategory(id, updates);
     await logAction('category.updated', `Updated category ID: ${id}`);
   };
 
   const deleteCategory = async (id) => {
     if (!hasPermission('categories.delete')) throw new Error('Permission denied');
-    await fsDeleteCategory(orgId, id);
+    await fsDeleteCategory(id);
     await logAction('category.deleted', `Deleted category ID: ${id}`);
   };
 

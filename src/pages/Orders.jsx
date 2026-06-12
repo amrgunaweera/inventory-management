@@ -1,3 +1,4 @@
+import { Button } from "@/components/ui/button";
 import { useState } from 'react';
 import {
   IconPlus, IconSearch, IconShoppingCart,
@@ -9,7 +10,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '.
 import { useInventory } from '../context/InventoryContext';
 import { useAuth } from '../context/AuthContext';
 
-const STATUSES = ['pending', 'processing', 'completed', 'cancelled'];
+
+const STATUSES = ['pending','processing','completed','cancelled'];
 const EMPTY_ORDER = { type: 'sale', customer: '', items: [], status: 'pending' };
 
 export default function Orders() {
@@ -65,8 +67,8 @@ export default function Orders() {
 
   const openNewOrder = () => {
     // Default type based on role
-    let defaultType = 'sale';
-    if (!canCreateSales) defaultType = 'purchase';
+    let defaultType ="sale";
+    if (!canCreateSales) defaultType ="purchase";
     setForm({ ...EMPTY_ORDER, type: defaultType });
     setOrderItems([{ productId: '', name: '', qty: 1, price: 0 }]);
     setIsOpen(true);
@@ -88,14 +90,12 @@ export default function Orders() {
         {['all','pending','processing','completed'].map(s => {
           const count = s === 'all' ? roleFiltered.length : roleFiltered.filter(o => o.status === s).length;
           return (
-            <button
-              key={s}
-              onClick={() => setFilterStatus(s)}
+            <Button variant='ghost' key={s} onClick={() => setFilterStatus(s)}
               className={`card text-left transition-all ${filterStatus === s ? 'ring-2 ring-brand-500' : ''}`}
             >
               <p className="text-2xl font-bold text-slate-800">{count}</p>
               <p className="text-xs text-slate-400 capitalize mt-0.5">{s === 'all' ? 'Total Orders' : s}</p>
-            </button>
+            </Button>
           );
         })}
       </div>
@@ -122,9 +122,9 @@ export default function Orders() {
           )}
 
           {canCreate && (
-            <button onClick={openNewOrder} className="btn-primary">
+            <Button variant="default" onClick={openNewOrder} >
               <IconPlus size={16} /> New Order
-            </button>
+            </Button>
           )}
         </div>
 
@@ -186,8 +186,8 @@ export default function Orders() {
           size="lg"
           footer={
             <>
-              <button type="button" onClick={() => setIsOpen(false)} className="btn-secondary">Cancel</button>
-              <button type="submit" form="order-form" className="btn-primary">Create Order</button>
+              <Button type="button" onClick={() => setIsOpen(false)} variant="outline" >Cancel</Button>
+              <Button variant="default" type="submit" form="order-form" >Create Order</Button>
             </>
           }
         >
@@ -214,7 +214,7 @@ export default function Orders() {
             <div>
               <div className="flex items-center justify-between mb-2">
                 <label className="label mb-0">Order Items</label>
-                <button type="button" onClick={handleAddItem} className="text-xs text-brand-500 hover:text-brand-600 font-semibold">+ Add item</button>
+                <Button variant="ghost" type="button" onClick={handleAddItem} className="text-xs text-brand-500 hover:text-brand-600 font-semibold">+ Add item</Button>
               </div>
               <div className="space-y-2">
                 {orderItems.map((item, idx) => (
@@ -233,7 +233,7 @@ export default function Orders() {
                       <Input
                         type="number" min="1" placeholder="Qty"
                         value={item.qty}
-                        onChange={e => handleItemChange(idx, 'qty', parseInt(e.target.value) || 1)}
+                        onChange={e => handleItemChange(idx,'qty', parseInt(e.target.value) || 1)}
                         className="text-xs h-8"
                       />
                     </div>
@@ -241,7 +241,7 @@ export default function Orders() {
                       <Input
                         type="number" step="0.01" min="0" placeholder="Price"
                         value={item.price}
-                        onChange={e => handleItemChange(idx, 'price', parseFloat(e.target.value) || 0)}
+                        onChange={e => handleItemChange(idx,'price', parseFloat(e.target.value) || 0)}
                         className="text-xs h-8"
                       />
                     </div>
@@ -250,7 +250,7 @@ export default function Orders() {
                     </div>
                     <div className="col-span-1 text-right">
                       {orderItems.length > 1 && (
-                        <button type="button" onClick={() => handleRemoveItem(idx)} className="text-red-400 hover:text-red-600 text-xs">✕</button>
+                        <Button variant="ghost" type="button" onClick={() => handleRemoveItem(idx)} className="text-red-400 hover:text-red-600 text-xs">✕</Button>
                       )}
                     </div>
                   </div>

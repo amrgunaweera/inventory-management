@@ -1,3 +1,4 @@
+import { Button } from "@/components/ui/button";
 import { NavLink, useNavigate } from 'react-router-dom';
 import {
   IconLayoutDashboard, IconPackage, IconTag, IconShoppingCart,
@@ -11,10 +12,12 @@ import { useInventory } from '../../context/InventoryContext';
 import { useAuth } from '../../context/AuthContext';
 import { canAccessRoute, getRoleSidebarClasses, ROLES } from '../../lib/roles';
 
+
 const NAV_ITEMS = [
   // Core — visible to all roles (route access handled per-role)
   { label: 'Dashboard', icon: IconLayoutDashboard, to: '/dashboard', feature: null },
-  { label: 'Users', icon: IconWorld, to: '/platform/users', feature: null },
+  { label: 'Dashboard', icon: IconLayoutDashboard, to: '/platform/dashboard', feature: null },
+  { label: 'Users', icon: IconUsers, to: '/platform/users', feature: null },
   { label: 'Stores', icon: IconBuildingStore, to: '/platform/stores', feature: null },
   { label: 'Products', icon: IconPackage, to: '/products', feature: null },
   { label: 'Categories', icon: IconTag, to: '/categories', feature: null },
@@ -140,14 +143,13 @@ export default function Sidebar() {
       {/* Footer */}
       {role !== 'super_admin' && (
         <div className="p-4 border-t border-white/5">
-          {canAccessRoute(role, '/billing') ? (
-            <button
-              onClick={() => navigate('/billing')}
+          {canAccessRoute(role,'/billing') ? (
+            <Button variant='ghost' onClick={() => navigate('/billing')}
               className="w-full flex items-center gap-2 text-xs text-slate-400 hover:text-white transition-colors duration-200 group"
             >
               <span className="flex-1 text-left">Upgrade plan</span>
               <IconChevronRight size={14} className="group-hover:translate-x-0.5 transition-transform" />
-            </button>
+            </Button>
           ) : (
             <div className="text-xs text-slate-500">
               {plan.name} Plan

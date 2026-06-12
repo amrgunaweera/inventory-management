@@ -1,3 +1,4 @@
+import { Button } from "@/components/ui/button";
 import { useState, useEffect } from 'react';
 import { IconPlus, IconEdit, IconTrash, IconBuildingWarehouse, IconMapPin, IconAlertTriangle } from '@tabler/icons-react';
 import Modal from '../components/ui/Modal';
@@ -7,6 +8,7 @@ import { LockedOverlay } from '../components/ui/PlanGate';
 import { Input } from '../components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select';
 import {
+
   subscribeToWarehouses,
   addWarehouse,
   updateWarehouse,
@@ -35,7 +37,7 @@ export default function Warehouses() {
   }, [orgId, hasFeature]);
 
   if (!hasFeature('multiLocation')) {
-    return <LockedOverlay feature="multiLocation" />;
+    return <LockedOverlay feature='multiLocation' />;
   }
 
   const openAdd = () => {
@@ -82,9 +84,9 @@ export default function Warehouses() {
             <p className="text-xs text-slate-400 mt-0.5">Manage multiple storage locations and stock.</p>
           </div>
           {canManage && (
-            <button onClick={openAdd} className="btn-primary">
+            <Button variant="default" onClick={openAdd} >
               <IconPlus size={16} /> Add Location
-            </button>
+            </Button>
           )}
         </div>
 
@@ -97,12 +99,12 @@ export default function Warehouses() {
                 </div>
                 {canManage && (
                   <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                    <button onClick={() => openEdit(w)} className="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-brand-50 text-slate-400 hover:text-brand-500 transition-colors">
+                    <Button variant="ghost" onClick={() => openEdit(w)} size="icon-sm" className="rounded-lg hover:bg-brand-50 text-slate-400 hover:text-brand-500 transition-colors">
                       <IconEdit size={14} />
-                    </button>
-                    <button onClick={() => setDeleteConfirm(w)} className="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-red-50 text-slate-400 hover:text-red-500 transition-colors">
+                    </Button>
+                    <Button variant="ghost" onClick={() => setDeleteConfirm(w)} size="icon-sm" className="rounded-lg hover:bg-red-50 text-slate-400 hover:text-red-500 transition-colors">
                       <IconTrash size={14} />
-                    </button>
+                    </Button>
                   </div>
                 )}
               </div>
@@ -144,8 +146,8 @@ export default function Warehouses() {
         size="sm"
         footer={
           <>
-            <button type="button" onClick={() => setIsOpen(false)} className="btn-secondary">Cancel</button>
-            <button type="submit" form="warehouse-form" className="btn-primary">{editTarget ? 'Save Changes' : 'Add Location'}</button>
+            <Button type="button" onClick={() => setIsOpen(false)} variant="outline" >Cancel</Button>
+            <Button variant="default" type="submit" form="warehouse-form" >{editTarget ? 'Save Changes' : 'Add Location'}</Button>
           </>
         }
       >
@@ -192,8 +194,8 @@ export default function Warehouses() {
         }
         footer={
           <>
-            <button onClick={() => setDeleteConfirm(null)} className="btn-secondary">Cancel</button>
-            <button onClick={handleDelete} className="btn-danger">Delete</button>
+            <Button onClick={() => setDeleteConfirm(null)} variant="outline" >Cancel</Button>
+            <Button variant="destructive" onClick={handleDelete} >Delete</Button>
           </>
         }
       />

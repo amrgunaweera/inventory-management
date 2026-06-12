@@ -9,6 +9,17 @@ export default {
       fontFamily: {
         sans: ['Inter', 'sans-serif'],
       },
+      fontSize: {
+        'xs': ['10px', '14px'],
+        'sm': ['11px', '16px'],
+        'base': ['12px', '18px'],
+        'lg': ['14px', '20px'],
+        'xl': ['16px', '24px'],
+        '2xl': ['18px', '28px'],
+        '3xl': ['20px', '30px'],
+        '4xl': ['24px', '36px'],
+        '5xl': ['32px', '48px'],
+      },
       colors: {
         background: "#ffffff",
         foreground: "#0f172a",

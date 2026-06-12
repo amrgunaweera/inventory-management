@@ -1,3 +1,4 @@
+import { Button } from "@/components/ui/button";
 import { useState } from 'react';
 import { IconPlus, IconEdit, IconTrash, IconTruck, IconSearch, IconMail, IconPhone, IconAlertTriangle } from '@tabler/icons-react';
 import Modal from '../components/ui/Modal';
@@ -5,6 +6,7 @@ import { useInventory } from '../context/InventoryContext';
 import { useAuth } from '../context/AuthContext';
 import { Input } from '../components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select';
+
 
 const EMPTY = { name: '', email: '', phone: '', address: '', status: 'active' };
 
@@ -76,9 +78,9 @@ export default function Suppliers() {
             </div>
             
             {canCreate && (
-              <button onClick={openAdd} className="btn-primary flex-shrink-0">
+              <Button variant="default" onClick={openAdd} className="flex-shrink-0">
                 <IconPlus size={16} /> Add Supplier
-              </button>
+              </Button>
             )}
           </div>
         </div>
@@ -102,14 +104,14 @@ export default function Suppliers() {
                 {(canEdit || canDelete) && (
                   <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                     {canEdit && (
-                      <button onClick={() => openEdit(sup)} className="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-brand-50 text-slate-400 hover:text-brand-500 transition-colors">
+                      <Button variant="ghost" onClick={() => openEdit(sup)} size="icon-sm" className="rounded-lg hover:bg-brand-50 text-slate-400 hover:text-brand-500 transition-colors">
                         <IconEdit size={14} />
-                      </button>
+                      </Button>
                     )}
                     {canDelete && (
-                      <button onClick={() => setDeleteConfirm(sup)} className="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-red-50 text-slate-400 hover:text-red-500 transition-colors">
+                      <Button variant="ghost" onClick={() => setDeleteConfirm(sup)} size="icon-sm" className="rounded-lg hover:bg-red-50 text-slate-400 hover:text-red-500 transition-colors">
                         <IconTrash size={14} />
-                      </button>
+                      </Button>
                     )}
                   </div>
                 )}
@@ -143,8 +145,8 @@ export default function Suppliers() {
         title={editTarget ? 'Edit Supplier' : 'Add Supplier'}
         footer={
           <>
-            <button type="button" onClick={() => setIsOpen(false)} className="btn-secondary">Cancel</button>
-            <button type="submit" form="supplier-form" className="btn-primary">{editTarget ? 'Save Changes' : 'Add Supplier'}</button>
+            <Button type="button" onClick={() => setIsOpen(false)} variant="outline" >Cancel</Button>
+            <Button variant="default" type="submit" form="supplier-form" >{editTarget ? 'Save Changes' : 'Add Supplier'}</Button>
           </>
         }
       >
@@ -197,8 +199,8 @@ export default function Suppliers() {
         }
         footer={
           <>
-            <button onClick={() => setDeleteConfirm(null)} className="btn-secondary">Cancel</button>
-            <button onClick={() => { deleteSupplier(deleteConfirm.id); setDeleteConfirm(null); }} className="btn-danger">Delete</button>
+            <Button onClick={() => setDeleteConfirm(null)} variant="outline" >Cancel</Button>
+            <Button onClick={() => { deleteSupplier(deleteConfirm.id); setDeleteConfirm(null); }} variant="destructive" >Delete</Button>
           </>
         }
       />

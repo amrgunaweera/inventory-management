@@ -1,3 +1,4 @@
+import { Button } from "@/components/ui/button";
 import { useState, useEffect, useRef } from 'react';
 import { useLocation } from 'react-router-dom';
 import { IconSearch, IconBell, IconLogout, IconChevronDown } from '@tabler/icons-react';
@@ -6,20 +7,8 @@ import { useInventory } from '../../context/InventoryContext';
 import { ROLES } from '../../lib/roles';
 import { Input } from '../ui/input';
 
-const PAGE_TITLES = {
-  '/dashboard': { title: 'Dashboard', sub: 'Welcome back 👋' },
-  '/products': { title: 'Products', sub: 'Manage your product catalog' },
-  '/categories': { title: 'Categories', sub: 'Organise your products' },
-  '/orders': { title: 'Orders', sub: 'Track sales and purchases' },
-  '/reports': { title: 'Reports', sub: 'Sales insights and analytics' },
-  '/alerts': { title: 'Low Stock Alerts', sub: 'Items that need restocking' },
-  '/export': { title: 'CSV Export', sub: 'Download your data' },
-  '/settings': { title: 'Settings', sub: 'Store configuration' },
-  '/billing': { title: 'Billing & Plans', sub: 'Manage your subscription' },
-  '/team': { title: 'Team Management', sub: 'Manage members and roles' },
-  '/suppliers': { title: 'Suppliers', sub: 'Manage vendor relationships' },
-  '/warehouses': { title: 'Warehouses', sub: 'Manage storage locations' },
-  '/audit-log': { title: 'Audit Log', sub: 'System activity history' },
+
+const PAGE_TITLES = { '/dashboard': { title: 'Dashboard', sub: 'Welcome back 👋' },'/products': { title: 'Products', sub: 'Manage your product catalog' },'/categories': { title: 'Categories', sub: 'Organise your products' },'/orders': { title: 'Orders', sub: 'Track sales and purchases' },'/reports': { title: 'Reports', sub: 'Sales insights and analytics' },'/alerts': { title: 'Low Stock Alerts', sub: 'Items that need restocking' },'/export': { title: 'CSV Export', sub: 'Download your data' },'/settings': { title: 'Settings', sub: 'Store configuration' },'/billing': { title: 'Billing & Plans', sub: 'Manage your subscription' },'/team': { title: 'Team Management', sub: 'Manage members and roles' },'/suppliers': { title: 'Suppliers', sub: 'Manage vendor relationships' },'/warehouses': { title: 'Warehouses', sub: 'Manage storage locations' },'/audit-log': { title: 'Audit Log', sub: 'System activity history' },'/platform/dashboard': { title: 'Dashboard', sub: 'Platform overview and stats' },'/platform/users': { title: 'Platform Users', sub: 'Manage all users across the platform' },'/platform/stores': { title: 'Platform Stores', sub: 'Manage all store organizations' },
 };
 
 export default function Topbar() {
@@ -61,19 +50,18 @@ export default function Topbar() {
       {/* Alerts */}
       {user?.role !== 'super_admin' && (
         <div className="relative">
-          <button className="w-9 h-9 flex items-center justify-center rounded-md hover:bg-slate-100 transition-colors text-slate-500 hover:text-slate-800">
+          <Button   size="icon" className="rounded-md hover:bg-slate-100 transition-colors text-slate-500 hover:text-slate-800" >
             <IconBell size={18} />
             {lowStockProducts.length > 0 && (
               <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full" />
             )}
-          </button>
+          </Button>
         </div>
       )}
 
       {/* User */}
       <div className="relative flex items-center pl-3 border-l border-slate-100" ref={dropdownRef}>
-        <button
-          onClick={() => setDropdownOpen(!dropdownOpen)}
+        <Button variant="ghost" onClick={() => setDropdownOpen(!dropdownOpen)}
           className="flex items-center gap-3 text-left focus:outline-none hover:bg-slate-50 p-1.5 rounded-md transition-colors"
         >
           <div className="w-8 h-8 rounded-full bg-gradient-to-br from-brand-400 to-violet-500 flex items-center justify-center text-white text-xs font-bold">
@@ -84,7 +72,7 @@ export default function Topbar() {
             <p className="text-xs text-slate-400 mt-1">{ROLES[user?.role]?.label || user?.role || 'User'}</p>
           </div>
           <IconChevronDown size={14} className={`text-slate-400 transition-transform duration-200 ${dropdownOpen ? 'rotate-180' : ''}`} />
-        </button>
+        </Button>
 
         {dropdownOpen && (
           <div className="absolute right-0 top-full mt-2 w-56 bg-white border border-slate-200 rounded-md shadow-lg py-1.5 z-50">
@@ -94,8 +82,7 @@ export default function Topbar() {
               <p className="text-xs text-slate-500 truncate">{user?.email}</p>
             </div>
             
-            <button
-              onClick={() => {
+            <Button variant="ghost" onClick={() => {
                 setDropdownOpen(false);
                 logout();
               }}
@@ -103,7 +90,7 @@ export default function Topbar() {
             >
               <IconLogout size={16} />
               Sign out
-            </button>
+            </Button>
           </div>
         )}
       </div>

@@ -36,7 +36,7 @@ export default function Modal({ isOpen, onClose, title, description, icon, foote
           </div>
         </div>
         {footer && (
-          <div className="px-6 py-4 bg-slate-50 border-t border-slate-100 flex items-center justify-end gap-3">
+          <div className="modal-footer px-6 py-4 bg-slate-50 border-t border-slate-100 flex items-center justify-end gap-3">
             {footer}
           </div>
         )}

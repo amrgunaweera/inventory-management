@@ -51,9 +51,9 @@ const P = {
 
   // Categories
   'categories.view':           ['store_owner', 'store_sales_person'],
-  'categories.create':         ['store_owner'],
-  'categories.edit':           ['store_owner'],
-  'categories.delete':         ['store_owner'],
+  'categories.create':         [],
+  'categories.edit':           [],
+  'categories.delete':         [],
 
   // Orders — Sales
   'orders.view_sales':         ['store_owner', 'store_sales_person'],
@@ -116,6 +116,7 @@ const P = {
   'export.csv':                ['store_owner'],
 
   // Platform Administration
+  'platform.dashboard.view':   [], // Only super_admin via override
   'platform.users.manage':     [], // Only super_admin via override
   'platform.stores.manage':    [], // Only super_admin via override
 };
@@ -125,14 +126,15 @@ const P = {
 export function hasPermission(role, permission) {
   if (!role || !permission) return false;
   if (role === 'super_admin') {
-    if (
-      permission.startsWith('team.') ||
-      permission.startsWith('billing.') ||
-      permission.startsWith('alerts.')
-    ) {
-      return false; // Super admin cannot manage store teams, billing, or see alerts
+    // Super Admin manages platform settings, users, and stores
+    if (permission.startsWith('platform.') || permission.startsWith('categories.')) {
+      return true;
     }
-    return true; // Super admin overrides everything else
+    // They can view store data (read-only) for platform monitoring
+    if (permission.endsWith('.view') || permission === 'orders.view_all' || permission === 'reports.view' || permission === 'settings.personal') {
+      return true;
+    }
+    return false;
   }
 
   const allowed = P[permission];
@@ -183,6 +185,7 @@ const ROUTE_PERMISSIONS = {
   '/suppliers':    ['suppliers.view'],
   '/warehouses':   ['warehouses.view'],
   '/audit-log':    ['audit.view'],
+  '/platform/dashboard': ['platform.dashboard.view'],
   '/platform/users': ['platform.users.manage'],
   '/platform/stores': ['platform.stores.manage'],
 };
@@ -190,8 +193,8 @@ const ROUTE_PERMISSIONS = {
 export function canAccessRoute(role, route, planId = 'free') {
   if (!role || !route) return false;
   if (role === 'super_admin') {
-    if (route === '/team' || route === '/billing' || route === '/alerts') return false; // Super admin cannot access store team page, billing page, or alerts page
-    return true;
+    if (route === '/platform/dashboard' || route === '/platform/users' || route === '/platform/stores' || route === '/products' || route === '/settings' || route === '/categories') return true;
+    return false;
   }
 
   const required = ROUTE_PERMISSIONS[route];
@@ -205,6 +208,7 @@ export function canAccessRoute(role, route, planId = 'free') {
  * @returns {string}
  */
 export function getDefaultRoute(role) {
+  if (role === 'super_admin') return '/platform/dashboard';
   const preferredRoutes = ['/dashboard', '/products', '/orders', '/reports'];
   for (const route of preferredRoutes) {
     if (canAccessRoute(role, route)) return route;

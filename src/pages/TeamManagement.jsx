@@ -1,3 +1,4 @@
+import { Button } from "@/components/ui/button";
 import { useState, useEffect } from 'react';
 import {
   IconMail, IconTrash, IconUserPlus, IconShield,
@@ -18,6 +19,7 @@ import RoleBadge from '../components/ui/RoleBadge';
 import { Badge } from '../components/ui/Badge';
 import { Input } from '../components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select';
+
 
 export default function TeamManagement() {
   const { user, hasPermission } = useAuth();
@@ -91,9 +93,9 @@ export default function TeamManagement() {
           <h2 className="text-base font-bold text-slate-800">Team Management</h2>
           <p className="text-xs text-slate-400 mt-0.5">Manage your organization members and roles.</p>
         </div>
-        <button onClick={() => setIsInviteOpen(true)} className="btn-primary">
+        <Button onClick={() => setIsInviteOpen(true)} variant="default" >
           <IconUserPlus size={16} /> Invite Member
-        </button>
+        </Button>
       </div>
 
       {/* Members List */}
@@ -142,13 +144,12 @@ export default function TeamManagement() {
                 </td>
                 <td className="px-5 py-4 text-right">
                   {m.id !== user.uid && (
-                    <button
-                      onClick={() => setRemoveConfirm(m.id)}
+                    <Button variant="ghost" onClick={() => setRemoveConfirm(m.id)}
                       className="text-slate-400 hover:text-red-500 transition-colors p-1"
                       title="Remove member"
                     >
                       <IconTrash size={16} />
-                    </button>
+                    </Button>
                   )}
                 </td>
               </tr>
@@ -190,12 +191,11 @@ export default function TeamManagement() {
                   </td>
                   <td className="px-5 py-4 text-right">
                     {inv.status === 'pending' && (
-                      <button
-                        onClick={() => cancelInvite(inv.id)}
+                      <Button variant="ghost" onClick={() => cancelInvite(inv.id)}
                         className="text-xs text-red-500 font-medium hover:text-red-600 transition-colors"
                       >
                         Cancel Invite
-                      </button>
+                      </Button>
                     )}
                   </td>
                 </tr>
@@ -213,8 +213,8 @@ export default function TeamManagement() {
         size="sm"
         footer={
           <>
-            <button type="button" onClick={() => setIsInviteOpen(false)} className="btn-secondary">Cancel</button>
-            <button type="submit" form="invite-form" className="btn-primary">Send Invite</button>
+            <Button type="button" onClick={() => setIsInviteOpen(false)} variant="outline" >Cancel</Button>
+            <Button variant="default" type="submit" form="invite-form" >Send Invite</Button>
           </>
         }
       >
@@ -262,8 +262,8 @@ export default function TeamManagement() {
         description="Are you sure you want to remove this member? They will lose access to the organization immediately."
         footer={
           <>
-            <button onClick={() => setRemoveConfirm(null)} className="btn-secondary">Cancel</button>
-            <button onClick={handleRemoveMember} className="btn-danger">Remove</button>
+            <Button onClick={() => setRemoveConfirm(null)} variant="outline" >Cancel</Button>
+            <Button variant="destructive" onClick={handleRemoveMember} >Remove</Button>
           </>
         }
       />

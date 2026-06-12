@@ -9,7 +9,7 @@ export default function Reports() {
   const { hasFeature } = useSubscription();
   const { products, orders, totalRevenue } = useInventory();
 
-  if (!hasFeature('reports')) return <LockedOverlay feature="reports" />;
+  if (!hasFeature('reports')) return <LockedOverlay feature='reports' />;
 
   const completedSales = orders.filter(o => o.type === 'sale' && o.status === 'completed');
   const avgOrderValue = completedSales.length > 0 ? totalRevenue / completedSales.length : 0;

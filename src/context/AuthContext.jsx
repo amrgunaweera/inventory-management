@@ -78,23 +78,26 @@ export function AuthProvider({ children }) {
       profile = await getUserProfile(firebaseUser.uid);
     }
 
-    const orgId = profile?.organizationId || null;
-
-    let role = null;
+    let orgId = profile?.organizationId || null;
+    let role = profile?.role || null;
     let orgName = null;
 
-    if (orgId) {
+    if (role === 'super_admin') {
+      orgId = null;
+      orgName = 'System Admin';
+    } else if (orgId) {
       // Fetch membership and org details concurrently
       const [membership, org] = await Promise.all([
         getMember(orgId, firebaseUser.uid),
         getOrganization(orgId)
       ]);
       
-      role = membership?.role || null;
+      if (!role) {
+        role = membership?.role || null;
+      }
       orgName = org?.name || 'My Organization';
 
       if (org?.status === 'disabled' && role !== 'super_admin') {
-        // Prevent lockout for Super Admins if their attached demo org gets disabled
         await signOut(auth);
         throw new Error('Your organization has been disabled by an administrator.');
       }
@@ -172,16 +175,16 @@ export function AuthProvider({ children }) {
         resolvedOrgName = invitation.orgName;
 
         // Create user profile pointing to the org
-        await createUserProfile(uid, { name, email, organizationId });
+        await createUserProfile(uid, { name, email, organizationId, role });
       } else {
         // No invitation — create a new org and become admin
-        await createUserProfile(uid, { name, email, organizationId: null });
+        role = 'store_owner';
+        await createUserProfile(uid, { name, email, organizationId: null, role });
         organizationId = await createOrganization(uid, {
           name: orgName || 'My Organization',
           userName: name,
           userEmail: email,
         });
-        role = 'store_owner';
         resolvedOrgName = orgName || 'My Organization';
       }
 

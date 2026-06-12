@@ -1,3 +1,4 @@
+import { Button } from "@/components/ui/button";
 import {
   IconPackage, IconShoppingCart, IconAlertTriangle, IconCurrencyDollar,
   IconTrendingUp, IconArrowRight, IconTruck, IconBuildingWarehouse,
@@ -11,6 +12,7 @@ import { Badge } from '../components/ui/Badge';
 import { useInventory } from '../context/InventoryContext';
 import { useSubscription } from '../context/SubscriptionContext';
 import { useAuth } from '../context/AuthContext';
+
 
 export default function Dashboard() {
   const { products, orders, suppliers, lowStockProducts, totalInventoryValue, totalRevenue } = useInventory();
@@ -76,7 +78,7 @@ export default function Dashboard() {
         {/* Store Sales Person: pending sales */}
         {role === 'store_sales_person' && (
           <KPICard
-            title="Pending Sales"
+            title='Pending Sales'
             value={pendingOrders.filter(o => o.type === 'sale').length}
             sub="Awaiting processing"
             icon={IconClipboardCheck}
@@ -131,12 +133,10 @@ export default function Dashboard() {
           <div className="card">
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-base font-bold text-slate-800">Recent Orders</h3>
-              <button
-                onClick={() => navigate('/orders')}
-                className="text-xs text-brand-500 hover:text-brand-600 font-semibold flex items-center gap-1 transition-colors"
-              >
+              <Button variant="ghost" onClick={() => navigate('/orders')}
+                className="text-xs text-brand-500 hover:text-brand-600 font-semibold flex items-center gap-1 transition-colors" >
                 View all <IconArrowRight size={13} />
-              </button>
+              </Button>
             </div>
             <div className="space-y-3">
               {recentOrders
@@ -170,12 +170,11 @@ export default function Dashboard() {
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-base font-bold text-slate-800">Low Stock Alerts</h3>
               {plan.features.lowStockAlerts && (
-                <button
-                  onClick={() => navigate('/alerts')}
+                <Button variant="ghost" onClick={() => navigate('/alerts')}
                   className="text-xs text-brand-500 hover:text-brand-600 font-semibold flex items-center gap-1 transition-colors"
                 >
                   View all <IconArrowRight size={13} />
-                </button>
+                </Button>
               )}
             </div>
             {lowStockProducts.length === 0 ? (

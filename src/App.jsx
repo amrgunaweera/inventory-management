@@ -3,7 +3,7 @@ import { AuthProvider, useAuth } from './context/AuthContext';
 import { InventoryProvider } from './context/InventoryContext';
 import { SubscriptionProvider, useSubscription } from './context/SubscriptionContext';
 import Layout from './components/layout/Layout';
-import { canAccessRoute } from './lib/roles';
+import { canAccessRoute, getDefaultRoute } from './lib/roles';
 
 import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
@@ -21,6 +21,7 @@ import Warehouses from './pages/Warehouses';
 import AuditLog from './pages/AuditLog';
 import PlatformUsers from './pages/PlatformUsers';
 import PlatformStores from './pages/PlatformStores';
+import PlatformDashboard from './pages/PlatformDashboard';
 import AccessDenied from './pages/AccessDenied';
 
 /**
@@ -53,11 +54,23 @@ function RoleRoute({ route, children }) {
   return children;
 }
 
+function RootRedirect() {
+  const { user, loading } = useAuth();
+  if (loading) return null;
+  if (!user) return <Navigate to="/login" replace />;
+  return <Navigate to={getDefaultRoute(user.role)} replace />;
+}
+
+function WildcardRedirect() {
+  const { user } = useAuth();
+  return <Navigate to={user ? getDefaultRoute(user.role) : "/login"} replace />;
+}
+
 function AppRoutes() {
   return (
     <Routes>
       <Route path="/login" element={<Login />} />
-      <Route path="/" element={<Navigate to="/dashboard" replace />} />
+      <Route path="/" element={<RootRedirect />} />
       <Route
         path="/*"
         element={
@@ -77,10 +90,11 @@ function AppRoutes() {
                 <Route path="/suppliers" element={<RoleRoute route="/suppliers"><Suppliers /></RoleRoute>} />
                 <Route path="/warehouses" element={<RoleRoute route="/warehouses"><Warehouses /></RoleRoute>} />
                 <Route path="/audit-log" element={<RoleRoute route="/audit-log"><AuditLog /></RoleRoute>} />
+                <Route path="/platform/dashboard" element={<RoleRoute route="/platform/dashboard"><PlatformDashboard /></RoleRoute>} />
                 <Route path="/platform/users" element={<RoleRoute route="/platform/users"><PlatformUsers /></RoleRoute>} />
                 <Route path="/platform/stores" element={<RoleRoute route="/platform/stores"><PlatformStores /></RoleRoute>} />
                 <Route path="/access-denied" element={<AccessDenied />} />
-                <Route path="*" element={<Navigate to="/dashboard" replace />} />
+                <Route path="*" element={<WildcardRedirect />} />
               </Routes>
             </Layout>
           </PrivateRoute>

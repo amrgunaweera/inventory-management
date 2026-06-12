@@ -1,5 +1,7 @@
+import { Button } from "@/components/ui/button";
 import { IconCheck, IconSparkles, IconCreditCard, IconBolt } from '@tabler/icons-react';
 import { useSubscription, PLANS } from '../context/SubscriptionContext';
+
 
 const FEATURE_LIST = [
   { key: 'products', label: (lim) => lim === Infinity ? 'Unlimited products' : `Up to ${lim} products` },
@@ -8,9 +10,9 @@ const FEATURE_LIST = [
 ];
 
 const PLAN_FEATURES = {
-  free: ['Basic product management', 'Order tracking', 'Category management'],
-  pro: ['Everything in Free', 'Unlimited products & categories', 'Low stock alerts', 'Sales reports', 'CSV export', 'Up to 3 staff accounts'],
-  business: ['Everything in Pro', 'Multi-location support', 'Unlimited staff accounts', 'Priority support', 'Advanced analytics', 'API access'],
+  free: ['Basic product management','Order tracking','Category management'],
+  pro: ['Everything in Free','Unlimited products & categories','Low stock alerts','Sales reports','CSV export','Up to 3 staff accounts'],
+  business: ['Everything in Pro','Multi-location support','Unlimited staff accounts','Priority support','Advanced analytics','API access'],
 };
 
 const PLAN_STYLE = {
@@ -80,13 +82,12 @@ export default function Billing() {
                 ))}
               </ul>
 
-              <button
-                onClick={() => upgradeTo(plan.id)}
+              <Button variant="ghost" onClick={() => upgradeTo(plan.id)}
                 disabled={isActive}
                 className={`w-full py-2.5 rounded-xl text-sm font-semibold transition-all duration-200 ${isActive ? 'bg-slate-100 text-slate-400 cursor-default' : style.btn}`}
               >
                 {isActive ? '✓ Current Plan' : plan.id === 'free' ? 'Downgrade to Free' : `Switch to ${plan.name}`}
-              </button>
+              </Button>
             </div>
           );
         })}
@@ -97,9 +98,9 @@ export default function Billing() {
         <h3 className="text-sm font-bold text-slate-700 mb-3">Frequently Asked Questions</h3>
         <div className="space-y-3">
           {[
-            ['Can I switch plans anytime?', 'Yes! You can upgrade or downgrade at any time. Changes take effect immediately.'],
-            ['Is there a free trial?', 'The Free plan is available forever with no credit card required.'],
-            ['What payment methods are accepted?', 'We accept all major credit cards and PayPal.'],
+            ['Can I switch plans anytime?','Yes! You can upgrade or downgrade at any time. Changes take effect immediately.'],
+            ['Is there a free trial?','The Free plan is available forever with no credit card required.'],
+            ['What payment methods are accepted?','We accept all major credit cards and PayPal.'],
           ].map(([q, a], i) => (
             <div key={i}>
               <p className="text-xs font-semibold text-slate-700">{q}</p>

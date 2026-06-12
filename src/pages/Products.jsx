@@ -1,3 +1,4 @@
+import { Button } from "@/components/ui/button";
 import { useState } from 'react';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -15,15 +16,16 @@ import { useAuth } from '../context/AuthContext';
 import { Input } from '../components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select';
 
+
 const productSchema = z.object({
-  name: z.string().min(1, { message: "Name is required" }),
-  sku: z.string().min(1, { message: "SKU is required" }),
-  category: z.string().min(1, { message: "Category is required" }),
-  price: z.coerce.number().min(0, { message: "Price must be >= 0" }),
-  cost: z.coerce.number().min(0, { message: "Cost must be >= 0" }),
-  stock: z.coerce.number().int({ message: "Must be an integer" }).min(0, { message: "Stock must be >= 0" }),
-  minStock: z.coerce.number().int({ message: "Must be an integer" }).min(0, { message: "Min Stock must be >= 0" }),
-  status: z.enum(['active', 'inactive'])
+  name: z.string().min(1, { message: 'Name is required' }),
+  sku: z.string().min(1, { message: 'SKU is required' }),
+  category: z.string().min(1, { message: 'Category is required' }),
+  price: z.coerce.number().min(0, { message: 'Price must be >= 0' }),
+  cost: z.coerce.number().min(0, { message: 'Cost must be >= 0' }),
+  stock: z.coerce.number().int({ message: 'Must be an integer' }).min(0, { message: 'Stock must be >= 0' }),
+  minStock: z.coerce.number().int({ message: 'Must be an integer' }).min(0, { message: 'Min Stock must be >= 0' }),
+  status: z.enum(['active','inactive'])
 });
 
 export default function Products() {
@@ -103,10 +105,19 @@ export default function Products() {
   };
 
   const stockStatus = (p) => {
-    if (p.stock === 0) return 'out';
-    if (role !== 'super_admin' && p.stock <= p.minStock) return 'low';
-    return 'active';
+    if (p.stock === 0) return'out';
+    if (role !== 'super_admin' && p.stock <= p.minStock) return'low';
+    return'active';
   };
+
+  const categoryOptions = categories.map(c => {
+    const buildPath = (cat) => {
+      if (!cat.parentId) return cat.name;
+      const parent = categories.find(p => p.id === cat.parentId);
+      return parent ? `${buildPath(parent)} > ${cat.name}` : cat.name;
+    };
+    return { id: c.id, name: c.name, path: buildPath(c) };
+  }).sort((a, b) => a.path.localeCompare(b.path));
 
   const uniqueCategories = [...new Set(products.map(p => p.category))];
 
@@ -134,7 +145,9 @@ export default function Products() {
               }}
             >
               <SelectTrigger className="w-[140px] text-xs h-9">
-                <SelectValue placeholder="All Store Types" />
+                <SelectValue placeholder="All Store Types">
+                  {(val) => val === 'all' ? 'All Store Types' : val}
+                </SelectValue>
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All Store Types</SelectItem>
@@ -159,16 +172,14 @@ export default function Products() {
                 className="text-xs h-9 w-56 pr-8"
               />
               {selectedStore && (
-                <button
-                  type="button"
-                  onClick={() => {
+                <Button variant="ghost" type="button" onClick={() => {
                     setSelectedStore(null);
                     setStoreSearch('');
                   }}
                   className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 text-xs"
                 >
                   ✕
-                </button>
+                </Button>
               )}
               {showStoreDropdown && (
                 <div className="absolute left-0 mt-1 w-64 bg-white border border-slate-200 rounded shadow-lg z-50 max-h-60 overflow-y-auto text-xs">
@@ -176,10 +187,7 @@ export default function Products() {
                     {storeSuggestions.length === 0 ? 'No stores found' : `Suggestions (${storeSuggestions.length})`}
                   </div>
                   {storeSuggestions.map(store => (
-                    <button
-                      type="button"
-                      key={store.id}
-                      onClick={() => {
+                    <Button variant="ghost" type="button" key={store.id} onClick={() => {
                         setSelectedStore(store);
                         setStoreSearch(store.name);
                         setShowStoreDropdown(false);
@@ -193,12 +201,10 @@ export default function Products() {
                       <span className="text-[9px] bg-slate-100 text-slate-500 px-1.5 py-0.5 rounded uppercase font-bold shrink-0">
                         {store.type}
                       </span>
-                    </button>
+                    </Button>
                   ))}
                   {selectedStore && (
-                    <button
-                      type="button"
-                      onClick={() => {
+                    <Button variant="ghost" type="button" onClick={() => {
                         setSelectedStore(null);
                         setStoreSearch('');
                         setShowStoreDropdown(false);
@@ -206,7 +212,7 @@ export default function Products() {
                       className="w-full text-left px-3 py-2 bg-slate-50 text-slate-600 font-medium hover:bg-slate-100 text-center border-t border-slate-100"
                     >
                       Clear Selection
-                    </button>
+                    </Button>
                   )}
                 </div>
               )}
@@ -230,7 +236,13 @@ export default function Products() {
             <IconFilter size={15} className="text-slate-400" />
             <Select value={filterCat} onValueChange={val => setFilterCat(val)}>
               <SelectTrigger className="w-[140px] text-xs h-9">
-                <SelectValue placeholder="All Categories" />
+                <SelectValue placeholder="All Categories">
+                  {(val) => {
+                    if (val === 'all') return'All Categories';
+                    const option = categoryOptions.find(o => o.name === val);
+                    return option ? option.path : val;
+                  }}
+                </SelectValue>
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All Categories</SelectItem>
@@ -239,7 +251,9 @@ export default function Products() {
             </Select>
             <Select value={filterStatus} onValueChange={val => setFilterStatus(val)}>
               <SelectTrigger className="w-[120px] text-xs h-9">
-                <SelectValue placeholder="All Status" />
+                <SelectValue placeholder="All Status">
+                  {(val) => val === 'all' ? 'All Status' : val === 'active' ? 'Active' : val === 'inactive' ? 'Inactive' : val}
+                </SelectValue>
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All Status</SelectItem>
@@ -250,13 +264,9 @@ export default function Products() {
           </div>
 
           {canCreate && (
-            <button
-              onClick={openAdd}
-              disabled={atLimit}
-              className="btn-primary disabled:opacity-50 disabled:cursor-not-allowed"
-            >
+            <Button variant="default" onClick={openAdd} disabled={atLimit} className="disabled:opacity-50 disabled:cursor-not-allowed" >
               <IconPlus size={16} /> Add Product
-            </button>
+            </Button>
           )}
         </div>
 
@@ -333,20 +343,18 @@ export default function Products() {
                     <td className="px-4 py-3 text-right">
                       <div className="flex items-center justify-end gap-1">
                         {canEdit && (
-                          <button
-                            onClick={() => openEdit(p)}
-                            className="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-brand-50 text-slate-400 hover:text-brand-500 transition-colors"
+                          <Button variant="ghost" onClick={() => openEdit(p)}
+                            size="icon-sm" className="rounded-lg hover:bg-brand-50 text-slate-400 hover:text-brand-500 transition-colors"
                           >
                             <IconEdit size={14} />
-                          </button>
+                          </Button>
                         )}
                         {canDelete && (
-                          <button
-                            onClick={() => setDeleteConfirm(p)}
-                            className="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-red-50 text-slate-400 hover:text-red-500 transition-colors"
+                          <Button variant="ghost" onClick={() => setDeleteConfirm(p)}
+                            size="icon-sm" className="rounded-lg hover:bg-red-50 text-slate-400 hover:text-red-500 transition-colors"
                           >
                             <IconTrash size={14} />
-                          </button>
+                          </Button>
                         )}
                       </div>
                     </td>
@@ -373,10 +381,10 @@ export default function Products() {
           title={editTarget ? 'Edit Product' : 'Add Product'}
           footer={
             <>
-              <button type="button" onClick={() => setIsModalOpen(false)} className="btn-secondary" disabled={isSubmitting}>Cancel</button>
-              <button type="submit" form="product-form" className="btn-primary" disabled={isSubmitting}>
+              <Button type="button" onClick={() => setIsModalOpen(false)} variant="outline"  disabled={isSubmitting}>Cancel</Button>
+              <Button variant="default" type="submit" form="product-form" disabled={isSubmitting}>
                 {editTarget ? 'Save Changes' : 'Add Product'}
-              </button>
+              </Button>
             </>
           }
         >
@@ -394,10 +402,27 @@ export default function Products() {
               </div>
               <div>
                 <label className="label">Category</label>
-                <Input {...register('category')} placeholder="e.g. Electronics" list="cat-list" />
-                <datalist id="cat-list">
-                  {categories.map(c => <option key={c.id} value={c.name} />)}
-                </datalist>
+                <Controller
+                  name="category"
+                  control={control}
+                  render={({ field }) => (
+                    <Select value={field.value} onValueChange={field.onChange}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select a category">
+                          {(val) => {
+                            const option = categoryOptions.find(o => o.name === val);
+                            return option ? option.path : val;
+                          }}
+                        </SelectValue>
+                      </SelectTrigger>
+                      <SelectContent>
+                        {categoryOptions.map(c => (
+                          <SelectItem key={c.id} value={c.name}>{c.path}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  )}
+                />
                 {errors.category && <p className="text-xs text-rose-500 mt-1">{errors.category.message}</p>}
               </div>
               <div>
@@ -428,7 +453,9 @@ export default function Products() {
                   render={({ field }) => (
                     <Select value={field.value} onValueChange={field.onChange}>
                       <SelectTrigger>
-                        <SelectValue placeholder="Select status" />
+                        <SelectValue placeholder="Select status">
+                          {(val) => val === 'active' ? 'Active' : val === 'inactive' ? 'Inactive' : val}
+                        </SelectValue>
                       </SelectTrigger>
                       <SelectContent>
                         <SelectItem value="active">Active</SelectItem>
@@ -461,13 +488,11 @@ export default function Products() {
           }
           footer={
             <>
-              <button onClick={() => setDeleteConfirm(null)} className="btn-secondary">Cancel</button>
-              <button
-                onClick={() => { deleteProduct(deleteConfirm.id); setDeleteConfirm(null); }}
-                className="btn-danger"
+              <Button onClick={() => setDeleteConfirm(null)} variant="outline" >Cancel</Button>
+              <Button onClick={() => { deleteProduct(deleteConfirm.id); setDeleteConfirm(null); }} variant="destructive" 
               >
                 Delete
-              </button>
+              </Button>
             </>
           }
         />

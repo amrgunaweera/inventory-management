@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import {
   IconMail, IconTrash, IconUserPlus, IconShield,
-  IconCheck, IconX, IconClock
+  IconCheck, IconX, IconClock, IconAlertTriangle
 } from '@tabler/icons-react';
 import { useAuth } from '../context/AuthContext';
 import {
@@ -16,6 +16,8 @@ import { ROLES, getRoleColorClasses } from '../lib/roles';
 import Modal from '../components/ui/Modal';
 import RoleBadge from '../components/ui/RoleBadge';
 import { Badge } from '../components/ui/Badge';
+import { Input } from '../components/ui/input';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select';
 
 export default function TeamManagement() {
   const { user, hasPermission } = useAuth();
@@ -24,7 +26,7 @@ export default function TeamManagement() {
   const [members, setMembers] = useState([]);
   const [invitations, setInvitations] = useState([]);
   const [isInviteOpen, setIsInviteOpen] = useState(false);
-  const [inviteForm, setInviteForm] = useState({ email: '', role: 'warehouse_staff' });
+  const [inviteForm, setInviteForm] = useState({ email: '', role: 'store_sales_person' });
   const [removeConfirm, setRemoveConfirm] = useState(null);
 
   const canManage = hasPermission('team.manage');
@@ -51,7 +53,7 @@ export default function TeamManagement() {
         invitedBy: user.name || user.email,
       });
       setIsInviteOpen(false);
-      setInviteForm({ email: '', role: 'warehouse_staff' });
+      setInviteForm({ email: '', role: 'store_sales_person' });
     } catch (err) {
       console.error('Failed to invite:', err);
     }
@@ -123,15 +125,16 @@ export default function TeamManagement() {
                   {m.id === user.uid ? (
                     <RoleBadge role={m.role} />
                   ) : (
-                    <select
-                      className="input py-1.5 text-xs w-48 bg-transparent"
-                      value={m.role}
-                      onChange={(e) => handleRoleChange(m.id, e.target.value)}
-                    >
-                      {Object.keys(ROLES).map(rKey => (
-                        <option key={rKey} value={rKey}>{ROLES[rKey].label}</option>
-                      ))}
-                    </select>
+                    <Select value={m.role} onValueChange={(val) => handleRoleChange(m.id, val)}>
+                      <SelectTrigger className="w-48 h-8 text-xs bg-transparent">
+                        <SelectValue placeholder="Select role" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {Object.keys(ROLES).map(rKey => (
+                          <SelectItem key={rKey} value={rKey}>{ROLES[rKey].label}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                   )}
                 </td>
                 <td className="px-5 py-4 text-slate-500 text-xs">
@@ -203,14 +206,24 @@ export default function TeamManagement() {
       )}
 
       {/* Invite Modal */}
-      <Modal isOpen={isInviteOpen} onClose={() => setIsInviteOpen(false)} title="Invite Team Member" size="sm">
-        <form onSubmit={handleInvite} className="space-y-4">
+      <Modal 
+        isOpen={isInviteOpen} 
+        onClose={() => setIsInviteOpen(false)} 
+        title="Invite Team Member" 
+        size="sm"
+        footer={
+          <>
+            <button type="button" onClick={() => setIsInviteOpen(false)} className="btn-secondary">Cancel</button>
+            <button type="submit" form="invite-form" className="btn-primary">Send Invite</button>
+          </>
+        }
+      >
+        <form id="invite-form" onSubmit={handleInvite} className="space-y-4">
           <div>
             <label className="label">Email Address</label>
-            <input
+            <Input
               type="email"
               required
-              className="input"
               value={inviteForm.email}
               onChange={e => setInviteForm(f => ({ ...f, email: e.target.value }))}
               placeholder="colleague@example.com"
@@ -218,33 +231,42 @@ export default function TeamManagement() {
           </div>
           <div>
             <label className="label">Assign Role</label>
-            <select
-              className="input"
+            <Select
               value={inviteForm.role}
-              onChange={e => setInviteForm(f => ({ ...f, role: e.target.value }))}
+              onValueChange={val => setInviteForm(f => ({ ...f, role: val }))}
             >
-              {Object.keys(ROLES).map(rKey => (
-                <option key={rKey} value={rKey}>{ROLES[rKey].label} — {ROLES[rKey].description}</option>
-              ))}
-            </select>
-          </div>
-          <div className="flex gap-3 pt-4 border-t border-slate-100">
-            <button type="button" onClick={() => setIsInviteOpen(false)} className="btn-secondary flex-1">Cancel</button>
-            <button type="submit" className="btn-primary flex-1">Send Invite</button>
+              <SelectTrigger>
+                <SelectValue placeholder="Select role" />
+              </SelectTrigger>
+              <SelectContent>
+                {Object.keys(ROLES).map(rKey => (
+                  <SelectItem key={rKey} value={rKey}>{ROLES[rKey].label} — {ROLES[rKey].description}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
         </form>
       </Modal>
 
       {/* Remove Confirm Modal */}
-      <Modal isOpen={!!removeConfirm} onClose={() => setRemoveConfirm(null)} title="Remove Member" size="sm">
-        <p className="text-sm text-slate-600 mb-6">
-          Are you sure you want to remove this member? They will lose access to the organization immediately.
-        </p>
-        <div className="flex gap-3">
-          <button onClick={() => setRemoveConfirm(null)} className="btn-secondary flex-1">Cancel</button>
-          <button onClick={handleRemoveMember} className="btn-danger flex-1">Remove</button>
-        </div>
-      </Modal>
+      <Modal 
+        isOpen={!!removeConfirm} 
+        onClose={() => setRemoveConfirm(null)} 
+        title="Remove Member" 
+        size="sm"
+        icon={
+          <div className="w-10 h-10 rounded-full bg-rose-100 flex items-center justify-center text-rose-600">
+            <IconAlertTriangle size={24} stroke={1.5} />
+          </div>
+        }
+        description="Are you sure you want to remove this member? They will lose access to the organization immediately."
+        footer={
+          <>
+            <button onClick={() => setRemoveConfirm(null)} className="btn-secondary">Cancel</button>
+            <button onClick={handleRemoveMember} className="btn-danger">Remove</button>
+          </>
+        }
+      />
     </div>
   );
 }

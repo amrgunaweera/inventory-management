@@ -4,6 +4,8 @@ import {
 } from '@tabler/icons-react';
 import Modal from '../components/ui/Modal';
 import { Badge } from '../components/ui/Badge';
+import { Input } from '../components/ui/input';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select';
 import { useInventory } from '../context/InventoryContext';
 import { useAuth } from '../context/AuthContext';
 
@@ -28,11 +30,10 @@ export default function Orders() {
   const canEdit = hasPermission('orders.edit');
   const canViewAll = hasPermission('orders.view_all');
 
-  // Role-scoped filtering: Sales User sees only sales, Purchasing Officer sees only purchases
+  // Role-scoped filtering: Sales Person sees only sales
   const roleFiltered = orders.filter(o => {
     if (canViewAll) return true;
-    if (role === 'sales_user') return o.type === 'sale';
-    if (role === 'purchasing_officer') return o.type === 'purchase';
+    if (role === 'store_sales_person') return o.type === 'sale';
     return true;
   });
 
@@ -65,7 +66,7 @@ export default function Orders() {
   const openNewOrder = () => {
     // Default type based on role
     let defaultType = 'sale';
-    if (role === 'purchasing_officer' && !canCreateSales) defaultType = 'purchase';
+    if (!canCreateSales) defaultType = 'purchase';
     setForm({ ...EMPTY_ORDER, type: defaultType });
     setOrderItems([{ productId: '', name: '', qty: 1, price: 0 }]);
     setIsOpen(true);
@@ -90,7 +91,7 @@ export default function Orders() {
             <button
               key={s}
               onClick={() => setFilterStatus(s)}
-              className={`card text-left transition-all ${filterStatus === s ? 'ring-2 ring-brand-500' : 'hover:shadow-md'}`}
+              className={`card text-left transition-all ${filterStatus === s ? 'ring-2 ring-brand-500' : ''}`}
             >
               <p className="text-2xl font-bold text-slate-800">{count}</p>
               <p className="text-xs text-slate-400 capitalize mt-0.5">{s === 'all' ? 'Total Orders' : s}</p>
@@ -103,16 +104,21 @@ export default function Orders() {
         <div className="flex flex-wrap items-center gap-3 mb-5">
           <div className="relative flex-1 min-w-48">
             <IconSearch size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-            <input value={search} onChange={e => setSearch(e.target.value)} className="input pl-9" placeholder="Search orders or customer…" />
+            <Input value={search} onChange={e => setSearch(e.target.value)} className="pl-9 h-9" placeholder="Search orders or customer…" />
           </div>
 
           {/* Only show type filter if user can see both types */}
           {canViewAll && (
-            <select value={filterType} onChange={e => setFilterType(e.target.value)} className="input w-auto text-xs py-2">
-              <option value="all">All Types</option>
-              <option value="sale">Sales</option>
-              <option value="purchase">Purchases</option>
-            </select>
+            <Select value={filterType} onValueChange={val => setFilterType(val)}>
+              <SelectTrigger className="w-[140px] text-xs h-9">
+                <SelectValue placeholder="All Types" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Types</SelectItem>
+                <SelectItem value="sale">Sales</SelectItem>
+                <SelectItem value="purchase">Purchases</SelectItem>
+              </SelectContent>
+            </Select>
           )}
 
           {canCreate && (
@@ -148,13 +154,14 @@ export default function Orders() {
                   <td className="px-4 py-3"><Badge variant={order.status}>{order.status}</Badge></td>
                   {canEdit && (
                     <td className="px-4 py-3 text-right">
-                      <select
-                        value={order.status}
-                        onChange={e => updateOrder(order.id, { status: e.target.value })}
-                        className="input py-1 text-xs w-auto"
-                      >
-                        {STATUSES.map(s => <option key={s} value={s}>{s}</option>)}
-                      </select>
+                      <Select value={order.status} onValueChange={val => updateOrder(order.id, { status: val })}>
+                        <SelectTrigger className="w-[120px] text-xs h-8">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {STATUSES.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}
+                        </SelectContent>
+                      </Select>
                     </td>
                   )}
                 </tr>
@@ -172,19 +179,35 @@ export default function Orders() {
 
       {/* New Order Modal */}
       {canCreate && (
-        <Modal isOpen={isOpen} onClose={() => setIsOpen(false)} title="Create New Order" size="lg">
-          <form onSubmit={handleSave} className="space-y-4">
+        <Modal 
+          isOpen={isOpen} 
+          onClose={() => setIsOpen(false)} 
+          title="Create New Order" 
+          size="lg"
+          footer={
+            <>
+              <button type="button" onClick={() => setIsOpen(false)} className="btn-secondary">Cancel</button>
+              <button type="submit" form="order-form" className="btn-primary">Create Order</button>
+            </>
+          }
+        >
+          <form id="order-form" onSubmit={handleSave} className="space-y-4">
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <label className="label">Order Type</label>
-                <select className="input" value={form.type} onChange={e => setForm(f => ({ ...f, type: e.target.value }))}>
-                  {canCreateSales && <option value="sale">Sale</option>}
-                  {canCreatePurchase && <option value="purchase">Purchase</option>}
-                </select>
+                <Select value={form.type} onValueChange={val => setForm(f => ({ ...f, type: val }))}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Order Type" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {canCreateSales && <SelectItem value="sale">Sale</SelectItem>}
+                    {canCreatePurchase && <SelectItem value="purchase">Purchase</SelectItem>}
+                  </SelectContent>
+                </Select>
               </div>
               <div>
                 <label className="label">Customer / Supplier</label>
-                <input required className="input" value={form.customer} onChange={e => setForm(f => ({ ...f, customer: e.target.value }))} placeholder="Name…" />
+                <Input required value={form.customer} onChange={e => setForm(f => ({ ...f, customer: e.target.value }))} placeholder="Name…" />
               </div>
             </div>
 
@@ -197,29 +220,29 @@ export default function Orders() {
                 {orderItems.map((item, idx) => (
                   <div key={idx} className="grid grid-cols-12 gap-2 items-center">
                     <div className="col-span-5">
-                      <select
-                        className="input text-xs py-1.5"
-                        value={item.productId}
-                        onChange={e => handleProductSelect(idx, e.target.value)}
-                      >
-                        <option value="">Select product…</option>
-                        {products.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
-                      </select>
+                      <Select value={item.productId} onValueChange={val => handleProductSelect(idx, val)}>
+                        <SelectTrigger className="text-xs h-8">
+                          <SelectValue placeholder="Select product…" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {products.map(p => <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>)}
+                        </SelectContent>
+                      </Select>
                     </div>
                     <div className="col-span-2">
-                      <input
+                      <Input
                         type="number" min="1" placeholder="Qty"
                         value={item.qty}
                         onChange={e => handleItemChange(idx, 'qty', parseInt(e.target.value) || 1)}
-                        className="input text-xs py-1.5"
+                        className="text-xs h-8"
                       />
                     </div>
                     <div className="col-span-3">
-                      <input
+                      <Input
                         type="number" step="0.01" min="0" placeholder="Price"
                         value={item.price}
                         onChange={e => handleItemChange(idx, 'price', parseFloat(e.target.value) || 0)}
-                        className="input text-xs py-1.5"
+                        className="text-xs h-8"
                       />
                     </div>
                     <div className="col-span-1 text-right text-xs text-slate-500 font-semibold">
@@ -236,11 +259,6 @@ export default function Orders() {
               <div className="text-right text-sm font-bold text-slate-800 mt-2 pt-2 border-t border-slate-100">
                 Total: ${orderItems.reduce((s, i) => s + i.qty * i.price, 0).toFixed(2)}
               </div>
-            </div>
-
-            <div className="flex gap-3 pt-2">
-              <button type="button" onClick={() => setIsOpen(false)} className="btn-secondary flex-1">Cancel</button>
-              <button type="submit" className="btn-primary flex-1">Create Order</button>
             </div>
           </form>
         </Modal>

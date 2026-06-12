@@ -1,7 +1,7 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { InventoryProvider } from './context/InventoryContext';
-import { SubscriptionProvider } from './context/SubscriptionContext';
+import { SubscriptionProvider, useSubscription } from './context/SubscriptionContext';
 import Layout from './components/layout/Layout';
 import { canAccessRoute } from './lib/roles';
 
@@ -19,6 +19,8 @@ import TeamManagement from './pages/TeamManagement';
 import Suppliers from './pages/Suppliers';
 import Warehouses from './pages/Warehouses';
 import AuditLog from './pages/AuditLog';
+import PlatformUsers from './pages/PlatformUsers';
+import PlatformStores from './pages/PlatformStores';
 import AccessDenied from './pages/AccessDenied';
 
 /**
@@ -43,8 +45,9 @@ function PrivateRoute({ children }) {
  */
 function RoleRoute({ route, children }) {
   const { user } = useAuth();
+  const { planId } = useSubscription();
   if (!user) return null;
-  if (!canAccessRoute(user.role, route)) {
+  if (!canAccessRoute(user.role, route, planId)) {
     return <AccessDenied />;
   }
   return children;
@@ -74,6 +77,8 @@ function AppRoutes() {
                 <Route path="/suppliers" element={<RoleRoute route="/suppliers"><Suppliers /></RoleRoute>} />
                 <Route path="/warehouses" element={<RoleRoute route="/warehouses"><Warehouses /></RoleRoute>} />
                 <Route path="/audit-log" element={<RoleRoute route="/audit-log"><AuditLog /></RoleRoute>} />
+                <Route path="/platform/users" element={<RoleRoute route="/platform/users"><PlatformUsers /></RoleRoute>} />
+                <Route path="/platform/stores" element={<RoleRoute route="/platform/stores"><PlatformStores /></RoleRoute>} />
                 <Route path="/access-denied" element={<AccessDenied />} />
                 <Route path="*" element={<Navigate to="/dashboard" replace />} />
               </Routes>

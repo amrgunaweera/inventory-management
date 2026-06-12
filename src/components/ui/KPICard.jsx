@@ -11,7 +11,7 @@ export default function KPICard({ title, value, sub, icon: Icon, color = 'brand'
   const iconBg = colors[color] || colors.brand;
 
   return (
-    <Card className="group cursor-default">
+    <Card className="group cursor-default shadow-framer-sm hover:shadow-framer hover:-translate-y-0.5">
       <CardContent className="flex items-start gap-4">
         <div className={`w-12 h-12 rounded-2xl ${iconBg} shadow-sm flex items-center justify-center flex-shrink-0 transition-transform duration-300 ease-out group-hover:scale-110 group-hover:rotate-3`}>
           <Icon size={22} />

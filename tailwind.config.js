@@ -68,8 +68,14 @@ export default {
         'framer-hover': '0px 12px 48px rgba(0, 0, 0, 0.12), 0px 4px 16px rgba(0, 0, 0, 0.04)',
       },
       borderRadius: {
-        '3xl': '1.5rem',
-        '4xl': '2rem',
+        'sm': '0.125rem',
+        DEFAULT: '0.125rem',
+        'md': '0.25rem',
+        'lg': '0.25rem',
+        'xl': '0.375rem',
+        '2xl': '0.375rem',
+        '3xl': '0.5rem',
+        '4xl': '0.5rem',
       }
     },
   },

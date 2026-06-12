@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { IconClipboardList, IconSearch, IconUser } from '@tabler/icons-react';
 import { useAuth } from '../context/AuthContext';
 import { subscribeToAuditLog } from '../lib/firestoreService';
+import { Input } from '../components/ui/input';
 
 export default function AuditLog() {
   const { user, hasPermission } = useAuth();
@@ -37,10 +38,10 @@ export default function AuditLog() {
           </div>
           <div className="relative w-64">
             <IconSearch size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-            <input
+            <Input
               value={search}
               onChange={e => setSearch(e.target.value)}
-              className="input pl-9 text-sm py-2"
+              className="pl-9 h-9"
               placeholder="Search logs…"
             />
           </div>

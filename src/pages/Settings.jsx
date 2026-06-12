@@ -1,6 +1,8 @@
 import { useState } from 'react';
 import { IconDeviceFloppy, IconCheck } from '@tabler/icons-react';
 import { useAuth } from '../context/AuthContext';
+import { Input } from '../components/ui/input';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select';
 
 export default function Settings() {
   const { user, hasPermission } = useAuth();
@@ -32,29 +34,39 @@ export default function Settings() {
             <div className="space-y-4">
               <div>
                 <label className="label">Organization Name</label>
-                <input className="input" value={form.storeName} onChange={e => setForm(f => ({ ...f, storeName: e.target.value }))} />
+                <Input value={form.storeName} onChange={e => setForm(f => ({ ...f, storeName: e.target.value }))} />
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="label">Currency</label>
-                  <select className="input" value={form.currency} onChange={e => setForm(f => ({ ...f, currency: e.target.value }))}>
-                    <option value="USD">USD — US Dollar</option>
-                    <option value="GBP">GBP — British Pound</option>
-                    <option value="EUR">EUR — Euro</option>
-                    <option value="LKR">LKR — Sri Lankan Rupee</option>
-                    <option value="AUD">AUD — Australian Dollar</option>
-                    <option value="CAD">CAD — Canadian Dollar</option>
-                  </select>
+                  <Select value={form.currency} onValueChange={val => setForm(f => ({ ...f, currency: val }))}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select currency" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="USD">USD — US Dollar</SelectItem>
+                      <SelectItem value="GBP">GBP — British Pound</SelectItem>
+                      <SelectItem value="EUR">EUR — Euro</SelectItem>
+                      <SelectItem value="LKR">LKR — Sri Lankan Rupee</SelectItem>
+                      <SelectItem value="AUD">AUD — Australian Dollar</SelectItem>
+                      <SelectItem value="CAD">CAD — Canadian Dollar</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
                 <div>
                   <label className="label">Timezone</label>
-                  <select className="input" value={form.timezone} onChange={e => setForm(f => ({ ...f, timezone: e.target.value }))}>
-                    <option value="UTC-8">UTC-8 Pacific</option>
-                    <option value="UTC-5">UTC-5 Eastern</option>
-                    <option value="UTC+0">UTC+0 London</option>
-                    <option value="UTC+1">UTC+1 Central Europe</option>
-                    <option value="UTC+5.5">UTC+5:30 Colombo</option>
-                  </select>
+                  <Select value={form.timezone} onValueChange={val => setForm(f => ({ ...f, timezone: val }))}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select timezone" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="UTC-8">UTC-8 Pacific</SelectItem>
+                      <SelectItem value="UTC-5">UTC-5 Eastern</SelectItem>
+                      <SelectItem value="UTC+0">UTC+0 London</SelectItem>
+                      <SelectItem value="UTC+1">UTC+1 Central Europe</SelectItem>
+                      <SelectItem value="UTC+5.5">UTC+5:30 Colombo</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
               </div>
             </div>
@@ -67,16 +79,16 @@ export default function Settings() {
           <div className="space-y-4">
             <div>
               <label className="label">Your Name</label>
-              <input className="input" value={user?.name || ''} disabled className="input bg-slate-50" />
+              <Input value={user?.name || ''} disabled className="bg-slate-50" />
             </div>
             <div>
               <label className="label">Email Address</label>
-              <input type="email" className="input bg-slate-50" value={form.email} disabled />
+              <Input type="email" className="bg-slate-50" value={form.email} disabled />
             </div>
             {user?.roleLabel && (
               <div>
                 <label className="label">Your Role</label>
-                <input className="input bg-slate-50" value={user.roleLabel} disabled />
+                <Input className="bg-slate-50" value={user.roleLabel} disabled />
               </div>
             )}
           </div>
@@ -90,7 +102,10 @@ export default function Settings() {
               { key: 'lowStockEmail', label: 'Low stock email alerts', desc: 'Get notified when items fall below minimum' },
               { key: 'weeklyDigest', label: 'Weekly sales digest', desc: 'Summary of your week\'s performance' },
               { key: 'orderConfirmation', label: 'Order confirmations', desc: 'Email on every new order' },
-            ].map(item => (
+            ].filter(item => {
+              if (item.key === 'lowStockEmail' && user?.role === 'super_admin') return false;
+              return true;
+            }).map(item => (
               <div key={item.key} className="flex items-center justify-between py-2 border-b border-slate-50 last:border-0">
                 <div>
                   <p className="text-sm font-medium text-slate-700">{item.label}</p>

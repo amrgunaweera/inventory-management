@@ -1,8 +1,10 @@
+import { useState, useEffect, useRef } from 'react';
 import { useLocation } from 'react-router-dom';
-import { IconSearch, IconBell, IconLogout } from '@tabler/icons-react';
+import { IconSearch, IconBell, IconLogout, IconChevronDown } from '@tabler/icons-react';
 import { useAuth } from '../../context/AuthContext';
 import { useInventory } from '../../context/InventoryContext';
-import RoleBadge from '../ui/RoleBadge';
+import { ROLES } from '../../lib/roles';
+import { Input } from '../ui/input';
 
 const PAGE_TITLES = {
   '/dashboard': { title: 'Dashboard', sub: 'Welcome back 👋' },
@@ -25,6 +27,19 @@ export default function Topbar() {
   const { lowStockProducts } = useInventory();
   const { pathname } = useLocation();
   const page = PAGE_TITLES[pathname] || { title: 'Smartventory', sub: '' };
+  
+  const [dropdownOpen, setDropdownOpen] = useState(false);
+  const dropdownRef = useRef(null);
+
+  useEffect(() => {
+    function handleClickOutside(event) {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+        setDropdownOpen(false);
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
 
   return (
     <header className="h-16 bg-white border-b border-slate-100 flex items-center px-6 gap-4">
@@ -36,42 +51,61 @@ export default function Topbar() {
       {/* Search */}
       <div className="relative hidden md:block">
         <IconSearch size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-        <input
+        <Input
           type="text"
           placeholder="Search..."
-          className="pl-9 pr-4 py-2 text-sm bg-slate-50 border border-slate-200 rounded-lg w-56 focus:outline-none focus:ring-2 focus:ring-brand-500/30 focus:border-brand-400 transition-all"
+          className="pl-9 w-56 h-9 bg-slate-50"
         />
       </div>
 
       {/* Alerts */}
-      <div className="relative">
-        <button className="w-9 h-9 flex items-center justify-center rounded-lg hover:bg-slate-100 transition-colors text-slate-500 hover:text-slate-800">
-          <IconBell size={18} />
-          {lowStockProducts.length > 0 && (
-            <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full" />
-          )}
-        </button>
-      </div>
+      {user?.role !== 'super_admin' && (
+        <div className="relative">
+          <button className="w-9 h-9 flex items-center justify-center rounded-md hover:bg-slate-100 transition-colors text-slate-500 hover:text-slate-800">
+            <IconBell size={18} />
+            {lowStockProducts.length > 0 && (
+              <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full" />
+            )}
+          </button>
+        </div>
+      )}
 
       {/* User */}
-      <div className="flex items-center gap-3 pl-3 border-l border-slate-100">
-        <div className="w-8 h-8 rounded-full bg-gradient-to-br from-brand-400 to-violet-500 flex items-center justify-center text-white text-xs font-bold">
-          {user?.avatar || 'U'}
-        </div>
-        <div className="hidden md:block">
-          <div className="flex items-center gap-2">
-            <p className="text-sm font-semibold text-slate-800 leading-none">{user?.name}</p>
-            <RoleBadge role={user?.role} size="sm" />
-          </div>
-          <p className="text-xs text-slate-400 mt-0.5">{user?.orgName || 'My Organization'}</p>
-        </div>
+      <div className="relative flex items-center pl-3 border-l border-slate-100" ref={dropdownRef}>
         <button
-          onClick={logout}
-          className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-red-50 hover:text-red-500 text-slate-400 transition-colors"
-          title="Sign out"
+          onClick={() => setDropdownOpen(!dropdownOpen)}
+          className="flex items-center gap-3 text-left focus:outline-none hover:bg-slate-50 p-1.5 rounded-md transition-colors"
         >
-          <IconLogout size={16} />
+          <div className="w-8 h-8 rounded-full bg-gradient-to-br from-brand-400 to-violet-500 flex items-center justify-center text-white text-xs font-bold">
+            {user?.name ? user.name[0].toUpperCase() : (user?.email ? user.email[0].toUpperCase() : 'U')}
+          </div>
+          <div className="hidden md:block">
+            <p className="text-sm font-semibold text-slate-800 leading-none">{user?.name || 'Unnamed User'}</p>
+            <p className="text-xs text-slate-400 mt-1">{ROLES[user?.role]?.label || user?.role || 'User'}</p>
+          </div>
+          <IconChevronDown size={14} className={`text-slate-400 transition-transform duration-200 ${dropdownOpen ? 'rotate-180' : ''}`} />
         </button>
+
+        {dropdownOpen && (
+          <div className="absolute right-0 top-full mt-2 w-56 bg-white border border-slate-200 rounded-md shadow-lg py-1.5 z-50">
+            <div className="px-4 py-2 border-b border-slate-100">
+              <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-0.5">Signed in as</p>
+              <p className="text-sm font-bold text-slate-800 truncate">{user?.name || 'Unnamed User'}</p>
+              <p className="text-xs text-slate-500 truncate">{user?.email}</p>
+            </div>
+            
+            <button
+              onClick={() => {
+                setDropdownOpen(false);
+                logout();
+              }}
+              className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 flex items-center gap-2 transition-colors font-medium mt-1"
+            >
+              <IconLogout size={16} />
+              Sign out
+            </button>
+          </div>
+        )}
       </div>
     </header>
   );

@@ -19,6 +19,7 @@ import {
   seedOrgData,
   hasExistingProducts,
   addAuditLog,
+  subscribeToAllOrganizations,
 } from '../lib/firestoreService';
 import { SEED_PRODUCTS, SEED_CATEGORIES, SEED_ORDERS } from '../utils/seedData';
 
@@ -30,51 +31,116 @@ export function InventoryProvider({ children }) {
   const [categories, setCategories] = useState([]);
   const [orders, setOrders] = useState([]);
   const [suppliers, setSuppliers] = useState([]);
+  const [allStores, setAllStores] = useState([]);
+  const [productsMap, setProductsMap] = useState({});
   const [dbLoading, setDbLoading] = useState(true);
 
   const orgId = user?.organizationId;
+  const role = user?.role;
 
   useEffect(() => {
-    if (!orgId) {
+    if (!user) {
       setProducts([]);
       setCategories([]);
       setOrders([]);
       setSuppliers([]);
+      setAllStores([]);
       setDbLoading(false);
       return;
     }
 
-    // Auto-seed new organizations with demo data
-    const seedIfNew = async () => {
-      const hasProducts = await hasExistingProducts(orgId);
-      if (!hasProducts) {
-        await seedOrgData(orgId, {
-          products: SEED_PRODUCTS,
-          categories: SEED_CATEGORIES,
-          orders: SEED_ORDERS,
+    if (role === 'super_admin') {
+      setDbLoading(true);
+      let activeUnsubs = [];
+
+      const unsubOrgs = subscribeToAllOrganizations((orgs) => {
+        const storesList = orgs.map(org => ({
+          ...org,
+          type: org.type || (org.name?.toLowerCase().includes('wholesale') || org.name?.toLowerCase().includes('corp') ? 'Wholesale' : org.name?.toLowerCase().includes('warehouse') ? 'Warehouse' : 'Retail')
+        }));
+        setAllStores(storesList);
+
+        if (orgs.length === 0) {
+          setProducts([]);
+          setDbLoading(false);
+          return;
+        }
+
+        // Clean up previous product subscriptions
+        activeUnsubs.forEach(unsub => unsub());
+        activeUnsubs = [];
+
+        // Track products by orgId to merge them
+        const tempProducts = {};
+
+        orgs.forEach(org => {
+          const unsubProducts = subscribeToProducts(org.id, (orgProducts) => {
+            tempProducts[org.id] = orgProducts.map(p => ({
+              ...p,
+              orgId: org.id,
+              orgName: org.name || 'Unnamed Store',
+              orgType: org.type || (org.name?.toLowerCase().includes('wholesale') || org.name?.toLowerCase().includes('corp') ? 'Wholesale' : org.name?.toLowerCase().includes('warehouse') ? 'Warehouse' : 'Retail')
+            }));
+
+            // Merge and update state
+            const merged = Object.values(tempProducts).flat();
+            // Sort by createdAt desc in memory
+            merged.sort((a, b) => {
+              const timeA = a.createdAt?.toDate ? a.createdAt.toDate().getTime() : 0;
+              const timeB = b.createdAt?.toDate ? b.createdAt.toDate().getTime() : 0;
+              return timeB - timeA;
+            });
+            setProducts(merged);
+            setDbLoading(false);
+          });
+          activeUnsubs.push(unsubProducts);
         });
+      });
+
+      return () => {
+        unsubOrgs();
+        activeUnsubs.forEach(unsub => unsub());
+      };
+    } else {
+      // Normal non-admin user flow
+      if (!orgId) {
+        setProducts([]);
+        setCategories([]);
+        setOrders([]);
+        setSuppliers([]);
+        setDbLoading(false);
+        return;
       }
-    };
 
-    seedIfNew();
+      const seedIfNew = async () => {
+        const hasProducts = await hasExistingProducts(orgId);
+        if (!hasProducts) {
+          await seedOrgData(orgId, {
+            products: SEED_PRODUCTS,
+            categories: SEED_CATEGORIES,
+            orders: SEED_ORDERS,
+          });
+        }
+      };
 
-    // Set up real-time Firestore subscriptions (org-scoped)
-    const unsubProducts = subscribeToProducts(orgId, (data) => {
-      setProducts(data);
-      setDbLoading(false);
-    });
-    const unsubCategories = subscribeToCategories(orgId, setCategories);
-    const unsubOrders = subscribeToOrders(orgId, setOrders);
-    const unsubSuppliers = subscribeToSuppliers(orgId, setSuppliers);
+      seedIfNew();
 
-    // Clean up listeners on logout or orgId change
-    return () => {
-      unsubProducts();
-      unsubCategories();
-      unsubOrders();
-      unsubSuppliers();
-    };
-  }, [orgId]);
+      const unsubProducts = subscribeToProducts(orgId, (data) => {
+        setProducts(data);
+        setDbLoading(false);
+      });
+      const unsubCategories = subscribeToCategories(orgId, setCategories);
+      const unsubOrders = subscribeToOrders(orgId, setOrders);
+      const unsubSuppliers = subscribeToSuppliers(orgId, setSuppliers);
+
+      return () => {
+        unsubProducts();
+        unsubCategories();
+        unsubOrders();
+        unsubSuppliers();
+      };
+    }
+  }, [orgId, role, user]);
 
   // ─── Audit helper ───────────────────────────────────────────────────────────
 
@@ -197,6 +263,7 @@ export function InventoryProvider({ children }) {
         categories,
         orders,
         suppliers,
+        allStores,
         dbLoading,
         addProduct,
         updateProduct,

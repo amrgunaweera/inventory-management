@@ -26,35 +26,40 @@ Smartventory features a granular Role-Based Access Control system to secure your
 
 | Role | Role Key | Description / Responsibilities | Primary Scope |
 | :--- | :--- | :--- | :--- |
-| **Administrator** | `admin` | Full system control, system configurations, and billing. | Org Settings, Team, Audit Logs, Billing |
-| **Inventory Manager** | `inventory_manager` | Responsible for overall inventory, products, categories, and stock adjustment approvals. | Entire Inventory, Products, Categories |
-| **Warehouse Staff** | `warehouse_staff` | Handles day-to-day stock movements (Stock-in, Stock-out, and stock transfers). | Stock movements, warehouse views |
-| **Purchasing Officer** | `purchasing_officer` | Manages procurement, supplier relationships, and purchase orders. | Suppliers, Purchase Orders, Procurement |
-| **Sales User** | `sales_user` | Processes customer sales orders and sales-related inventory. | Sales Orders, Sales Reports |
-| **Management** | `management` | Read-only auditor view. Monitors business performance without modifying any data. | Reports, Dashboards, Read-only Views |
+| **Super Admin** | `super_admin` | Controls the entire platform and all stores. Bypasses all store-level security restrictions. | Platform-wide |
+| **Store Owner** | `store_owner` | Manages their own store and staff. Full control over their organization's data, billing, and settings. | Single Store (Full Access) |
+| **Store Sales Person** | `store_sales_person` | Handles daily sales and stock operations. Cannot access settings, billing, or advanced reports. | Single Store (Operations) |
+
+---
+
+### Developer Demo Accounts
+
+To facilitate rapid testing and verification of role capabilities, the login screen includes a **Quick Sign-In** panel. Clicking any role button automatically logs you in. If the account doesn't exist yet, it is registered on-the-fly under a shared tenant workspace named **Demo Corporation**.
+
+| Role | Email | Password |
+| :--- | :--- | :--- |
+| **Super Admin** | `demo.superadmin@smartventory.com` | `demoPassword123` |
+| **Store Owner** | `demo.owner@smartventory.com` | `demoPassword123` |
+| **Store Sales Person** | `demo.sales@smartventory.com` | `demoPassword123` |
 
 ---
 
 ### Permissions Matrix
 
-| Permission | Admin | Inventory Manager | Warehouse Staff | Purchasing Officer | Sales User | Management |
-| :--- | :---: | :---: | :---: | :---: | :---: | :---: |
-| **View Dashboard** | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
-| **Full Dashboard Stats** | ✓ | ✓ | - | - | - | ✓ |
-| **Manage Products (CUD)** | ✓ | ✓ | - | - | - | - |
-| **View Products** | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
-| **Manage Categories (CUD)** | ✓ | ✓ | - | - | - | - |
-| **Manage Sales Orders** | ✓ | ✓ | - | - | ✓ | - |
-| **Manage Purchase Orders** | ✓ | ✓ | - | ✓ | - | - |
-| **Stock In/Out/Transfer** | ✓ | ✓ | ✓ | - | - | - |
-| **Stock Adjustments / Approvals**| ✓ | ✓ | - | - | - | - |
-| **Manage Suppliers** | ✓ (All) | ✓ | - | ✓ | - | Read-only |
-| **Manage Warehouses** | ✓ | Read-only | Read-only | - | - | Read-only |
-| **View Reports** | ✓ | ✓ | - | - | - | ✓ |
-| **Manage Team & Invites** | ✓ | - | - | - | - | - |
-| **System Settings** | ✓ | - | - | - | - | - |
-| **Billing & Subscriptions** | ✓ | - | - | - | - | - |
-| **View Audit Logs** | ✓ | - | - | - | - | - |
+| Permission | Super Admin | Store Owner | Store Sales Person |
+| :--- | :---: | :---: | :---: |
+| **View Dashboard** | ✓ | ✓ | ✓ |
+| **Manage Products & Categories** | ✓ | ✓ | - |
+| **Manage Sales Orders** | ✓ | ✓ | ✓ |
+| **Manage Purchase Orders** | ✓ | ✓ | - |
+| **Stock In/Out/Transfer/Count** | ✓ | ✓ | ✓ |
+| **Stock Adjustments / Approvals**| ✓ | ✓ | - |
+| **Manage Suppliers** | ✓ | ✓ | - |
+| **Manage Warehouses** | ✓ | ✓ | Read-only |
+| **View Financial Reports** | ✓ | ✓ | - |
+| **Manage Team & Invites** | ✓ | ✓ | - |
+| **System Settings & Billing** | ✓ | ✓ | - |
+| **View Audit Logs** | ✓ | ✓ | - |
 
 ---
 

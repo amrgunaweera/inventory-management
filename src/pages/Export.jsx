@@ -4,6 +4,7 @@ import { LockedOverlay } from '../components/ui/PlanGate';
 import { useSubscription } from '../context/SubscriptionContext';
 import { useInventory } from '../context/InventoryContext';
 import { exportCSV } from '../utils/exportCSV';
+import { useAuth } from '../context/AuthContext';
 
 const EXPORT_OPTIONS = [
   { id: 'products', label: 'Products', description: 'Full product catalog with pricing and stock', icon: '📦' },
@@ -15,6 +16,7 @@ const EXPORT_OPTIONS = [
 export default function Export() {
   const { hasFeature } = useSubscription();
   const { products, categories, orders, lowStockProducts } = useInventory();
+  const { user } = useAuth();
   const [exported, setExported] = useState(null);
 
   if (!hasFeature('csvExport')) return <LockedOverlay feature="csvExport" />;
@@ -38,6 +40,11 @@ export default function Export() {
     setTimeout(() => setExported(null), 2500);
   };
 
+  const filteredOptions = EXPORT_OPTIONS.filter(opt => {
+    if (opt.id === 'low_stock' && user?.role === 'super_admin') return false;
+    return true;
+  });
+
   return (
     <div className="space-y-5 animate-slide-up">
       <div className="card">
@@ -46,8 +53,8 @@ export default function Export() {
           <p className="text-xs text-slate-400 mt-0.5">Download your inventory data as CSV files</p>
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          {EXPORT_OPTIONS.map(opt => (
-            <div key={opt.id} className="flex items-center gap-4 p-4 rounded-xl border border-slate-100 hover:border-slate-200 hover:shadow-sm transition-all duration-200">
+          {filteredOptions.map(opt => (
+            <div key={opt.id} className="flex items-center gap-4 p-4 rounded-xl border border-slate-100 hover:border-slate-200 transition-all duration-200">
               <span className="text-2xl">{opt.icon}</span>
               <div className="flex-1">
                 <p className="font-semibold text-slate-800 text-sm">{opt.label}</p>

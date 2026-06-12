@@ -34,7 +34,9 @@ import {
   writeBatch,
   limit,
 } from 'firebase/firestore';
-import { db } from './firebase';
+import { db, firebaseConfig } from './firebase';
+import { initializeApp, getApps } from 'firebase/app';
+import { getAuth, createUserWithEmailAndPassword, signOut } from 'firebase/auth';
 
 // ─── Path helpers ─────────────────────────────────────────────────────────────
 
@@ -75,7 +77,119 @@ export async function updateUserProfile(uid, updates) {
   await updateDoc(userRef(uid), { ...updates, updatedAt: serverTimestamp() });
 }
 
+/**
+ * Subscribe to all users in the platform. (Super Admin only)
+ */
+export function subscribeToAllUsers(callback) {
+  const q = query(collection(db, 'users'));
+  return onSnapshot(q, (snap) => {
+    const users = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+    // Sort in-memory to support documents lacking a createdAt field
+    users.sort((a, b) => {
+      const timeA = a.createdAt?.toDate ? a.createdAt.toDate().getTime() : 0;
+      const timeB = b.createdAt?.toDate ? b.createdAt.toDate().getTime() : 0;
+      return timeB - timeA;
+    });
+    callback(users);
+  }, (error) => {
+    console.error("subscribeToAllUsers error:", error);
+    callback([]);
+  });
+}
+
+/**
+ * Deactivate a user profile. (Super Admin only)
+ * The user will be flagged as disabled and blocked via security rules.
+ */
+export async function deactivateUser(uid) {
+  await updateDoc(userRef(uid), { 
+    status: 'disabled',
+    updatedAt: serverTimestamp()
+  });
+}
+
+function getSecondaryAuth() {
+  const name = 'AdminUserCreator';
+  const app = getApps().find(a => a.name === name) || initializeApp(firebaseConfig, name);
+  return getAuth(app);
+}
+
+/**
+ * Create a new user in Firebase Auth and Firestore by Admin.
+ */
+export async function createUserByAdmin({ name, email, password, orgId, role }) {
+  const secondaryAuth = getSecondaryAuth();
+  
+  // 1. Create Firebase Auth account
+  const credential = await createUserWithEmailAndPassword(secondaryAuth, email, password);
+  const uid = credential.user.uid;
+  
+  try {
+    // 2. Sign out of secondary auth immediately to avoid lingering sessions
+    await signOut(secondaryAuth);
+    
+    // 3. Write user profile and store assignment in Firestore using main db (batch)
+    const batch = writeBatch(db);
+    
+    // If role is super_admin, we default to the demo org (demo-org-123) so they have membership details loaded properly
+    let finalOrgId = orgId || null;
+    let finalRole = role || null;
+    
+    if (role === 'super_admin') {
+      finalOrgId = 'demo-org-123';
+      finalRole = 'super_admin';
+    }
+    
+    // Create the users/{uid} document
+    batch.set(userRef(uid), {
+      uid,
+      name: name || '',
+      email: email || '',
+      organizationId: finalOrgId,
+      createdAt: serverTimestamp(),
+      updatedAt: serverTimestamp(),
+    });
+    
+    // If assigned to a store, add to members collection
+    if (finalOrgId) {
+      batch.set(doc(db, 'organizations', finalOrgId, 'members', uid), {
+        uid,
+        name: name || '',
+        email: email || '',
+        role: finalRole,
+        joinedAt: serverTimestamp(),
+        invitedBy: null,
+      });
+    }
+    
+    await batch.commit();
+    return { uid };
+  } catch (err) {
+    console.error('Error post-auth-creation:', err);
+    throw err;
+  }
+}
+
 // ─── Organization ─────────────────────────────────────────────────────────────
+
+/**
+ * Subscribe to all organizations in the platform. (Super Admin only)
+ */
+export function subscribeToAllOrganizations(callback) {
+  const q = query(collection(db, 'organizations'));
+  return onSnapshot(q, (snap) => {
+    const orgs = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+    orgs.sort((a, b) => {
+      const timeA = a.createdAt?.toDate ? a.createdAt.toDate().getTime() : 0;
+      const timeB = b.createdAt?.toDate ? b.createdAt.toDate().getTime() : 0;
+      return timeB - timeA;
+    });
+    callback(orgs);
+  }, (error) => {
+    console.error("subscribeToAllOrganizations error:", error);
+    callback([]);
+  });
+}
 
 /**
  * Create a new organization and set the creator as admin.
@@ -484,3 +598,200 @@ export async function hasExistingProducts(orgId) {
   const snap = await getDocs(orgColRef(orgId, 'products'));
   return !snap.empty;
 }
+
+/**
+ * Setup a shared demo organization workspace and link a demo user as a member with their assigned role.
+ */
+export async function setupDemoMember(uid, { email, name, role }) {
+  const orgId = 'demo-org-123';
+
+  // 1. Ensure the demo organization document exists
+  // This might fail if it already exists and the current user is not an admin.
+  // We swallow the error because the organization is already set up.
+  try {
+    const orgRef_ = doc(db, 'organizations', orgId);
+    await setDoc(orgRef_, {
+      name: 'Demo Corporation',
+      ownerId: uid, // Can be set to the registering user
+      planId: 'business', // Business plan unlocks all features (e.g. warehouses)
+      settings: {
+        currency: 'USD',
+        timezone: 'UTC',
+      },
+      createdAt: serverTimestamp(),
+      updatedAt: serverTimestamp(),
+    }, { merge: true });
+  } catch (err) {
+    console.log("Skipping demo org update (likely already exists and user is not admin):", err);
+  }
+
+  const batch = writeBatch(db);
+
+  // 2. Set user profile
+  const userProfileRef = doc(db, 'users', uid);
+  batch.set(userProfileRef, {
+    uid,
+    name,
+    email,
+    organizationId: orgId,
+    createdAt: serverTimestamp(),
+    updatedAt: serverTimestamp(),
+  }, { merge: true });
+
+  // 3. Set membership and role details
+  const memRef = doc(db, 'organizations', orgId, 'members', uid);
+  batch.set(memRef, {
+    uid,
+    name,
+    email,
+    role,
+    joinedAt: serverTimestamp(),
+    invitedBy: null,
+  }, { merge: true });
+
+  await batch.commit();
+}
+
+/**
+ * Create a store (organization) as Super Admin.
+ */
+export async function createStoreByAdmin({ name, type, planId, ownerId }) {
+  const batch = writeBatch(db);
+  const orgDocRef_ = doc(collection(db, 'organizations'));
+  const orgId = orgDocRef_.id;
+
+  batch.set(orgDocRef_, {
+    name,
+    type,
+    planId: planId || 'free',
+    ownerId: ownerId || null,
+    status: 'active',
+    settings: {
+      currency: 'USD',
+      timezone: 'UTC',
+    },
+    createdAt: serverTimestamp(),
+    updatedAt: serverTimestamp(),
+  });
+
+  if (ownerId) {
+    const ownerProfile = await getUserProfile(ownerId);
+    
+    // Add to members collection
+    const memRef = doc(db, 'organizations', orgId, 'members', ownerId);
+    batch.set(memRef, {
+      uid: ownerId,
+      name: ownerProfile?.name || 'Store Owner',
+      email: ownerProfile?.email || '',
+      role: 'store_owner',
+      joinedAt: serverTimestamp(),
+      invitedBy: null,
+    });
+
+    // Update owner's user document
+    batch.update(doc(db, 'users', ownerId), {
+      organizationId: orgId,
+      updatedAt: serverTimestamp(),
+    });
+  }
+
+  await batch.commit();
+  return orgId;
+}
+
+/**
+ * Assign a user to a store (organization) as Super Admin, handling transitions.
+ */
+export async function assignUserToStore(uid, orgId, role = 'store_owner') {
+  const profile = await getUserProfile(uid);
+  const oldOrgId = profile?.organizationId;
+
+  const batch = writeBatch(db);
+
+  if (oldOrgId) {
+    batch.delete(doc(db, 'organizations', oldOrgId, 'members', uid));
+  }
+
+  if (orgId) {
+    const memRef = doc(db, 'organizations', orgId, 'members', uid);
+    batch.set(memRef, {
+      uid,
+      name: profile?.name || 'User',
+      email: profile?.email || '',
+      role,
+      joinedAt: serverTimestamp(),
+      invitedBy: null,
+    }, { merge: true });
+
+    batch.update(doc(db, 'users', uid), {
+      organizationId: orgId,
+      updatedAt: serverTimestamp(),
+    });
+  } else {
+    batch.update(doc(db, 'users', uid), {
+      organizationId: null,
+      updatedAt: serverTimestamp(),
+    });
+  }
+
+  await batch.commit();
+}
+
+/**
+ * Update a store (organization) details as Super Admin.
+ */
+export async function updateStoreByAdmin(orgId, { name, type, planId, ownerId }) {
+  const orgDocRef_ = doc(db, 'organizations', orgId);
+  const snap = await getDoc(orgDocRef_);
+  if (!snap.exists()) throw new Error('Store not found');
+  const oldData = snap.data();
+  const oldOwnerId = oldData.ownerId;
+
+  const batch = writeBatch(db);
+
+  // 1. Update organization root document
+  batch.update(orgDocRef_, {
+    name,
+    type,
+    planId,
+    ownerId: ownerId || null,
+    updatedAt: serverTimestamp(),
+  });
+
+  // 2. Handle owner transition if ownerId changed
+  if (ownerId !== oldOwnerId) {
+    if (oldOwnerId) {
+      batch.delete(doc(db, 'organizations', orgId, 'members', oldOwnerId));
+      batch.update(doc(db, 'users', oldOwnerId), {
+        organizationId: null,
+        updatedAt: serverTimestamp(),
+      });
+    }
+
+    if (ownerId) {
+      const ownerProfile = await getUserProfile(ownerId);
+      const newOwnerOldOrgId = ownerProfile?.organizationId;
+      if (newOwnerOldOrgId && newOwnerOldOrgId !== orgId) {
+        batch.delete(doc(db, 'organizations', newOwnerOldOrgId, 'members', ownerId));
+      }
+
+      const memRef = doc(db, 'organizations', orgId, 'members', ownerId);
+      batch.set(memRef, {
+        uid: ownerId,
+        name: ownerProfile?.name || 'Store Owner',
+        email: ownerProfile?.email || '',
+        role: 'store_owner',
+        joinedAt: serverTimestamp(),
+        invitedBy: null,
+      }, { merge: true });
+
+      batch.update(doc(db, 'users', ownerId), {
+        organizationId: orgId,
+        updatedAt: serverTimestamp(),
+      });
+    }
+  }
+
+  await batch.commit();
+}
+

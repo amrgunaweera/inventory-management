@@ -3,6 +3,7 @@
 ## Tech Stack
 - **Frontend Framework:** React 19 (via Vite)
 - **Styling:** Tailwind CSS 3.4
+- **UI Components:** shadcn/ui (Must be used for all form fields)
 - **Icons:** `@tabler/icons-react`
 - **Charts:** `recharts`
 - **Backend/BaaS:** Firebase (Auth, Firestore, Hosting)

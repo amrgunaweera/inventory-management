@@ -1,8 +1,10 @@
 import { useState } from 'react';
-import { IconPlus, IconEdit, IconTrash, IconTruck, IconSearch, IconMail, IconPhone } from '@tabler/icons-react';
+import { IconPlus, IconEdit, IconTrash, IconTruck, IconSearch, IconMail, IconPhone, IconAlertTriangle } from '@tabler/icons-react';
 import Modal from '../components/ui/Modal';
 import { useInventory } from '../context/InventoryContext';
 import { useAuth } from '../context/AuthContext';
+import { Input } from '../components/ui/input';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select';
 
 const EMPTY = { name: '', email: '', phone: '', address: '', status: 'active' };
 
@@ -65,10 +67,10 @@ export default function Suppliers() {
           <div className="flex items-center gap-3">
             <div className="relative w-64">
               <IconSearch size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-              <input
+              <Input
                 value={search}
                 onChange={e => setSearch(e.target.value)}
-                className="input pl-9"
+                className="pl-9"
                 placeholder="Search suppliers…"
               />
             </div>
@@ -83,7 +85,7 @@ export default function Suppliers() {
 
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
           {filtered.map(sup => (
-            <div key={sup.id} className="card p-5 border-slate-100 hover:border-brand-200 hover:shadow-md transition-all group">
+            <div key={sup.id} className="card p-5 border-slate-100 hover:border-brand-200 transition-all group">
               <div className="flex justify-between items-start mb-4">
                 <div className="flex items-center gap-3">
                   <div className="w-10 h-10 rounded-xl bg-blue-50 flex items-center justify-center flex-shrink-0">
@@ -135,49 +137,71 @@ export default function Suppliers() {
         )}
       </div>
 
-      <Modal isOpen={isOpen} onClose={() => setIsOpen(false)} title={editTarget ? 'Edit Supplier' : 'Add Supplier'}>
-        <form onSubmit={handleSave} className="space-y-4">
+      <Modal 
+        isOpen={isOpen} 
+        onClose={() => setIsOpen(false)} 
+        title={editTarget ? 'Edit Supplier' : 'Add Supplier'}
+        footer={
+          <>
+            <button type="button" onClick={() => setIsOpen(false)} className="btn-secondary">Cancel</button>
+            <button type="submit" form="supplier-form" className="btn-primary">{editTarget ? 'Save Changes' : 'Add Supplier'}</button>
+          </>
+        }
+      >
+        <form id="supplier-form" onSubmit={handleSave} className="space-y-4">
           <div className="grid grid-cols-2 gap-4">
             <div className="col-span-2">
               <label className="label">Company Name</label>
-              <input required className="input" value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} placeholder="e.g. Global Tech Supplies" />
+              <Input required value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} placeholder="e.g. Global Tech Supplies" />
             </div>
             <div>
               <label className="label">Email Address</label>
-              <input type="email" className="input" value={form.email} onChange={e => setForm(f => ({ ...f, email: e.target.value }))} placeholder="sales@example.com" />
+              <Input type="email" value={form.email} onChange={e => setForm(f => ({ ...f, email: e.target.value }))} placeholder="sales@example.com" />
             </div>
             <div>
               <label className="label">Phone Number</label>
-              <input className="input" value={form.phone} onChange={e => setForm(f => ({ ...f, phone: e.target.value }))} placeholder="+1 (555) 000-0000" />
+              <Input value={form.phone} onChange={e => setForm(f => ({ ...f, phone: e.target.value }))} placeholder="+1 (555) 000-0000" />
             </div>
             <div className="col-span-2">
               <label className="label">Physical Address</label>
-              <input className="input" value={form.address} onChange={e => setForm(f => ({ ...f, address: e.target.value }))} placeholder="123 Warehouse Row, City" />
+              <Input value={form.address} onChange={e => setForm(f => ({ ...f, address: e.target.value }))} placeholder="123 Warehouse Row, City" />
             </div>
             <div className="col-span-2">
               <label className="label">Status</label>
-              <select className="input" value={form.status} onChange={e => setForm(f => ({ ...f, status: e.target.value }))}>
-                <option value="active">Active</option>
-                <option value="inactive">Inactive</option>
-              </select>
+              <Select value={form.status} onValueChange={val => setForm(f => ({ ...f, status: val }))}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select status" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="active">Active</SelectItem>
+                  <SelectItem value="inactive">Inactive</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
-          </div>
-          <div className="flex gap-3 pt-2">
-            <button type="button" onClick={() => setIsOpen(false)} className="btn-secondary flex-1">Cancel</button>
-            <button type="submit" className="btn-primary flex-1">{editTarget ? 'Save Changes' : 'Add Supplier'}</button>
           </div>
         </form>
       </Modal>
 
-      <Modal isOpen={!!deleteConfirm} onClose={() => setDeleteConfirm(null)} title="Delete Supplier" size="sm">
-        <p className="text-sm text-slate-600 mb-6">
-          Are you sure you want to remove <strong>{deleteConfirm?.name}</strong>?
-        </p>
-        <div className="flex gap-3">
-          <button onClick={() => setDeleteConfirm(null)} className="btn-secondary flex-1">Cancel</button>
-          <button onClick={() => { deleteSupplier(deleteConfirm.id); setDeleteConfirm(null); }} className="btn-danger flex-1">Delete</button>
-        </div>
-      </Modal>
+      <Modal 
+        isOpen={!!deleteConfirm} 
+        onClose={() => setDeleteConfirm(null)} 
+        title="Delete Supplier" 
+        size="sm"
+        icon={
+          <div className="w-10 h-10 rounded-full bg-rose-100 flex items-center justify-center text-rose-600">
+            <IconAlertTriangle size={24} stroke={1.5} />
+          </div>
+        }
+        description={
+          <>Are you sure you want to remove <strong>{deleteConfirm?.name}</strong>?</>
+        }
+        footer={
+          <>
+            <button onClick={() => setDeleteConfirm(null)} className="btn-secondary">Cancel</button>
+            <button onClick={() => { deleteSupplier(deleteConfirm.id); setDeleteConfirm(null); }} className="btn-danger">Delete</button>
+          </>
+        }
+      />
     </div>
   );
 }

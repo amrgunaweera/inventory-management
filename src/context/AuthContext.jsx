@@ -15,6 +15,7 @@ import {
   findInvitationByEmail,
   acceptInvitation,
   getOrganization,
+  setupDemoMember,
 } from '../lib/firestoreService';
 import { hasPermission as checkPermission, canAccessRoute as checkRoute, ROLES } from '../lib/roles';
 
@@ -25,9 +26,10 @@ export function AuthProvider({ children }) {
   const [loading, setLoading] = useState(true);
   const isRegistering = useRef(false);
 
-  // Listen to Firebase Auth state changes
+  // Listen to Firebase Auth state changes (session restore on page load / logout)
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
+      // Skip if login/register is actively managing the state
       if (isRegistering.current) {
         return;
       }
@@ -51,20 +53,51 @@ export function AuthProvider({ children }) {
    * Load user profile + organization membership + role from Firestore.
    */
   const loadUserWithRole = async (firebaseUser) => {
-    const profile = await getUserProfile(firebaseUser.uid);
+    let profile = await getUserProfile(firebaseUser.uid);
+
+    // Check if user is disabled by admin
+    if (profile?.status === 'disabled') {
+      await signOut(auth);
+      throw new Error('Your account has been deactivated by an administrator.');
+    }
+
+    // Auto-heal broken demo accounts
+    if (!profile && firebaseUser.email?.includes('demo.') && firebaseUser.email?.includes('@smartventory.com')) {
+      const roleKey = firebaseUser.email.split('@')[0].split('.')[1];
+      let mappedRole = roleKey;
+      if (roleKey === 'superadmin') mappedRole = 'super_admin';
+      else if (roleKey === 'owner') mappedRole = 'store_owner';
+      else if (roleKey === 'sales') mappedRole = 'store_sales_person';
+      
+      console.log('Auto-healing broken demo account for role:', mappedRole);
+      await setupDemoMember(firebaseUser.uid, {
+        email: firebaseUser.email,
+        name: firebaseUser.displayName || `Demo User`,
+        role: mappedRole
+      });
+      profile = await getUserProfile(firebaseUser.uid);
+    }
+
     const orgId = profile?.organizationId || null;
 
     let role = null;
     let orgName = null;
 
     if (orgId) {
-      // Fetch membership to get role
-      const membership = await getMember(orgId, firebaseUser.uid);
+      // Fetch membership and org details concurrently
+      const [membership, org] = await Promise.all([
+        getMember(orgId, firebaseUser.uid),
+        getOrganization(orgId)
+      ]);
+      
       role = membership?.role || null;
-
-      // Fetch org name
-      const org = await getOrganization(orgId);
       orgName = org?.name || 'My Organization';
+
+      if (org?.status === 'disabled' && role !== 'super_admin') {
+        // Prevent lockout for Super Admins if their attached demo org gets disabled
+        await signOut(auth);
+        throw new Error('Your organization has been disabled by an administrator.');
+      }
     }
 
     const displayName = profile?.name || firebaseUser.displayName || 'User';
@@ -88,15 +121,25 @@ export function AuthProvider({ children }) {
 
   /**
    * Sign in an existing user with email and password.
+   * Fully loads the user profile before returning so the caller
+   * can navigate immediately without race conditions.
    */
   const login = async (email, password) => {
     try {
+      isRegistering.current = true;
       setLoading(true);
-      await signInWithEmailAndPassword(auth, email, password);
+
+      const credential = await signInWithEmailAndPassword(auth, email, password);
+
+      // Load user profile + role before returning
+      await loadUserWithRole(credential.user);
+
       return { success: true };
     } catch (err) {
+      return { success: false, error: err.message || mapAuthError(err.code) };
+    } finally {
       setLoading(false);
-      return { success: false, error: mapAuthError(err.code) };
+      isRegistering.current = false;
     }
   };
 
@@ -138,7 +181,7 @@ export function AuthProvider({ children }) {
           userName: name,
           userEmail: email,
         });
-        role = 'admin';
+        role = 'store_owner';
         resolvedOrgName = orgName || 'My Organization';
       }
 
@@ -159,13 +202,40 @@ export function AuthProvider({ children }) {
           .slice(0, 2),
       });
 
-      setLoading(false);
-      isRegistering.current = false;
       return { success: true };
     } catch (err) {
+      return { success: false, error: mapAuthError(err.code) };
+    } finally {
       setLoading(false);
       isRegistering.current = false;
+    }
+  };
+
+  /**
+   * Register a demo user, setting up the demo organization if needed.
+   */
+  const registerDemo = async (email, password, name, role) => {
+    try {
+      isRegistering.current = true;
+      setLoading(true);
+
+      // Create Firebase Auth account
+      const credential = await createUserWithEmailAndPassword(auth, email, password);
+      const { uid } = credential.user;
+      await updateProfile(credential.user, { displayName: name });
+
+      // Setup profile & membership inside the demo organization
+      await setupDemoMember(uid, { email, name, role });
+
+      // Load fully into local memory
+      await loadUserWithRole(credential.user);
+
+      return { success: true };
+    } catch (err) {
       return { success: false, error: mapAuthError(err.code) };
+    } finally {
+      setLoading(false);
+      isRegistering.current = false;
     }
   };
 
@@ -199,6 +269,7 @@ export function AuthProvider({ children }) {
         loading,
         login,
         register,
+        registerDemo,
         logout,
         hasPermission,
         canAccess,

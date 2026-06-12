@@ -20,23 +20,31 @@ service cloud.firestore {
       return isAuthenticated() && request.auth.uid == uid;
     }
 
-    // Check if the current user is a member of the given organization
-    function isOrgMember(orgId) {
-      return isAuthenticated() && exists(/databases/$(database)/documents/organizations/$(orgId)/members/$(request.auth.uid));
+    function isSuperAdmin() {
+      return isAuthenticated() && (
+        exists(/databases/$(database)/documents/platform_admins/$(request.auth.uid)) ||
+        (exists(/databases/$(database)/documents/organizations/demo-org-123/members/$(request.auth.uid)) &&
+         get(/databases/$(database)/documents/organizations/demo-org-123/members/$(request.auth.uid)).data.role == 'super_admin')
+      );
     }
 
-    // Check if current user is an admin of the given organization
-    function isOrgAdmin(orgId) {
-      return isAuthenticated() &&
-             get(/databases/$(database)/documents/organizations/$(orgId)/members/$(request.auth.uid)).data.role == 'admin';
+    // Check if the current user is a member of the given organization (or a super admin)
+    function isOrgMember(orgId) {
+      return isSuperAdmin() || (isAuthenticated() && exists(/databases/$(database)/documents/organizations/$(orgId)/members/$(request.auth.uid)));
+    }
+
+    // Check if current user is the owner of the given organization (or a super admin)
+    function isStoreOwner(orgId) {
+      return isSuperAdmin() || (isAuthenticated() &&
+             get(/databases/$(database)/documents/organizations/$(orgId)/members/$(request.auth.uid)).data.role == 'store_owner');
     }
 
     // ═══════════════════════════════════════════════════════════
     // users/{uid}  — User profile document
     // ═══════════════════════════════════════════════════════════
     match /users/{uid} {
-      // Users can read/write their own profile
-      allow read, write: if isOwner(uid);
+      // Users can read/write their own profile, Super Admin can read/write all
+      allow read, write: if isOwner(uid) || isSuperAdmin();
     }
 
     // ═══════════════════════════════════════════════════════════
@@ -47,7 +55,7 @@ service cloud.firestore {
       allow read: if isOrgMember(orgId);
       
       // Only admins can update the org data (like name, plan)
-      allow update: if isOrgAdmin(orgId);
+      allow update: if isStoreOwner(orgId);
 
       // Any authenticated user can create an organization
       allow create: if isAuthenticated();
@@ -59,7 +67,7 @@ service cloud.firestore {
 
         // A user can add themselves during organization creation or invitation acceptance
         // Also admins can update/delete members
-        allow write: if isOwner(memberUid) || isOrgAdmin(orgId);
+        allow write: if isOwner(memberUid) || isStoreOwner(orgId);
       }
 
       // ─── invitations subcollection ────────────────────────
@@ -99,7 +107,7 @@ service cloud.firestore {
       }
 
       match /auditLog/{id} {
-        allow read: if isOrgAdmin(orgId);
+        allow read: if isStoreOwner(orgId);
         allow create: if isOrgMember(orgId);
       }
     }

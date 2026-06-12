@@ -1,9 +1,11 @@
 import { useState, useEffect } from 'react';
-import { IconPlus, IconEdit, IconTrash, IconBuildingWarehouse, IconMapPin } from '@tabler/icons-react';
+import { IconPlus, IconEdit, IconTrash, IconBuildingWarehouse, IconMapPin, IconAlertTriangle } from '@tabler/icons-react';
 import Modal from '../components/ui/Modal';
 import { useAuth } from '../context/AuthContext';
 import { useSubscription } from '../context/SubscriptionContext';
 import { LockedOverlay } from '../components/ui/PlanGate';
+import { Input } from '../components/ui/input';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select';
 import {
   subscribeToWarehouses,
   addWarehouse,
@@ -135,43 +137,66 @@ export default function Warehouses() {
         )}
       </div>
 
-      <Modal isOpen={isOpen} onClose={() => setIsOpen(false)} title={editTarget ? 'Edit Warehouse' : 'Add Warehouse'} size="sm">
-        <form onSubmit={handleSave} className="space-y-4">
+      <Modal 
+        isOpen={isOpen} 
+        onClose={() => setIsOpen(false)} 
+        title={editTarget ? 'Edit Warehouse' : 'Add Warehouse'} 
+        size="sm"
+        footer={
+          <>
+            <button type="button" onClick={() => setIsOpen(false)} className="btn-secondary">Cancel</button>
+            <button type="submit" form="warehouse-form" className="btn-primary">{editTarget ? 'Save Changes' : 'Add Location'}</button>
+          </>
+        }
+      >
+        <form id="warehouse-form" onSubmit={handleSave} className="space-y-4">
           <div>
             <label className="label">Location Name</label>
-            <input required className="input" value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} placeholder="e.g. Main Hub" />
+            <Input required value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} placeholder="e.g. Main Hub" />
           </div>
           <div>
             <label className="label">Address / Region</label>
-            <input className="input" value={form.location} onChange={e => setForm(f => ({ ...f, location: e.target.value }))} placeholder="e.g. New York, USA" />
+            <Input value={form.location} onChange={e => setForm(f => ({ ...f, location: e.target.value }))} placeholder="e.g. New York, USA" />
           </div>
           <div>
             <label className="label">Max Capacity (items)</label>
-            <input type="number" className="input" value={form.capacity} onChange={e => setForm(f => ({ ...f, capacity: e.target.value }))} placeholder="Leave empty for unlimited" />
+            <Input type="number" value={form.capacity} onChange={e => setForm(f => ({ ...f, capacity: e.target.value }))} placeholder="Leave empty for unlimited" />
           </div>
           <div>
             <label className="label">Status</label>
-            <select className="input" value={form.status} onChange={e => setForm(f => ({ ...f, status: e.target.value }))}>
-              <option value="active">Active</option>
-              <option value="inactive">Inactive</option>
-            </select>
-          </div>
-          <div className="flex gap-3 pt-2">
-            <button type="button" onClick={() => setIsOpen(false)} className="btn-secondary flex-1">Cancel</button>
-            <button type="submit" className="btn-primary flex-1">{editTarget ? 'Save Changes' : 'Add Location'}</button>
+            <Select value={form.status} onValueChange={(val) => setForm(f => ({ ...f, status: val }))}>
+              <SelectTrigger>
+                <SelectValue placeholder="Select status" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="active">Active</SelectItem>
+                <SelectItem value="inactive">Inactive</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
         </form>
       </Modal>
 
-      <Modal isOpen={!!deleteConfirm} onClose={() => setDeleteConfirm(null)} title="Delete Warehouse" size="sm">
-        <p className="text-sm text-slate-600 mb-6">
-          Are you sure you want to remove <strong>{deleteConfirm?.name}</strong>?
-        </p>
-        <div className="flex gap-3">
-          <button onClick={() => setDeleteConfirm(null)} className="btn-secondary flex-1">Cancel</button>
-          <button onClick={handleDelete} className="btn-danger flex-1">Delete</button>
-        </div>
-      </Modal>
+      <Modal 
+        isOpen={!!deleteConfirm} 
+        onClose={() => setDeleteConfirm(null)} 
+        title="Delete Warehouse" 
+        size="sm"
+        icon={
+          <div className="w-10 h-10 rounded-full bg-rose-100 flex items-center justify-center text-rose-600">
+            <IconAlertTriangle size={24} stroke={1.5} />
+          </div>
+        }
+        description={
+          <>Are you sure you want to remove <strong>{deleteConfirm?.name}</strong>?</>
+        }
+        footer={
+          <>
+            <button onClick={() => setDeleteConfirm(null)} className="btn-secondary">Cancel</button>
+            <button onClick={handleDelete} className="btn-danger">Delete</button>
+          </>
+        }
+      />
     </div>
   );
 }

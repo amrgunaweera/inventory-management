@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { IconBuildingStore, IconEye, IconEyeOff } from '@tabler/icons-react';
 import { useAuth } from '../context/AuthContext';
@@ -21,9 +21,16 @@ export default function Login() {
   const [showPw, setShowPw] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [loadingTarget, setLoadingTarget] = useState(null);
 
-  const { login, register } = useAuth();
+  const { user, login, register, registerDemo } = useAuth();
   const navigate = useNavigate();
+
+  useEffect(() => {
+    if (user) {
+      navigate('/dashboard', { replace: true });
+    }
+  }, [user, navigate]);
 
   const resetForm = () => {
     setError('');
@@ -55,16 +62,68 @@ export default function Login() {
     }
 
     setLoading(true);
-    const result = mode === 'login'
-      ? await login(email, password)
-      : await register(email, password, name, orgName);
+    setLoadingTarget(mode);
 
-    if (result.success) {
-      navigate('/dashboard');
-    } else {
-      setError(result.error);
+    try {
+      const result = mode === 'login'
+        ? await login(email, password)
+        : await register(email, password, name, orgName);
+
+      if (result.success) {
+        // user is now fully loaded in AuthContext — useEffect will navigate
+        return;
+      } else {
+        setError(result.error);
+      }
+    } catch (err) {
+      setError('An unexpected error occurred. Please try again.');
+    } finally {
+      setLoading(false);
+      setLoadingTarget(null);
     }
-    setLoading(false);
+  };
+
+  const handleDemoLogin = async (roleKey) => {
+    setError('');
+    setLoading(true);
+    setLoadingTarget(roleKey);
+
+    const demoUsers = {
+      super_admin: { email: 'demo.superadmin@smartventory.com', name: 'Demo Super Admin' },
+      store_owner: { email: 'demo.owner@smartventory.com', name: 'Demo Store Owner' },
+      store_sales_person: { email: 'demo.sales@smartventory.com', name: 'Demo Sales Person' },
+    };
+
+    const targetUser = demoUsers[roleKey];
+    const demoPassword = 'demoPassword123';
+
+    try {
+      // 1. Try signing in (user already exists)
+      const result = await login(targetUser.email, demoPassword);
+      if (result.success) {
+        // user is now fully loaded — useEffect will navigate
+        return;
+      }
+
+      // 2. User doesn't exist yet — register them
+      const regResult = await registerDemo(
+        targetUser.email,
+        demoPassword,
+        targetUser.name,
+        roleKey
+      );
+      if (regResult.success) {
+        // user is now fully loaded — useEffect will navigate
+        return;
+      }
+
+      setError(regResult.error || 'Failed to setup demo user.');
+    } catch (err) {
+      setError('An unexpected error occurred. Please try again.');
+    } finally {
+      setLoading(false);
+      setLoadingTarget(null);
+    }
   };
 
   return (
@@ -227,6 +286,44 @@ export default function Login() {
               ) : mode === 'login' ? 'Sign In' : 'Create Account'}
             </Button>
           </form>
+
+          {/* Demo Roles Quick Sign-In */}
+          <div className="mt-6 pt-6 border-t border-white/10">
+            <div className="text-center mb-3">
+              <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest bg-slate-950 px-3 py-1 rounded-full border border-white/5">
+                Quick Sign-In by Role
+              </span>
+            </div>
+            <div className="grid grid-cols-1 gap-2">
+              <button
+                type="button"
+                disabled={loading}
+                onClick={() => handleDemoLogin('super_admin')}
+                className="flex items-center justify-between text-left p-3 rounded-lg bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/20 transition text-sm font-semibold text-rose-300 disabled:opacity-50"
+              >
+                <span>Super Admin</span>
+                {loadingTarget === 'super_admin' && <div className="w-4 h-4 border-2 border-rose-500/30 border-t-rose-500 rounded-full animate-spin" />}
+              </button>
+              <button
+                type="button"
+                disabled={loading}
+                onClick={() => handleDemoLogin('store_owner')}
+                className="flex items-center justify-between text-left p-3 rounded-lg bg-brand-500/10 hover:bg-brand-500/20 border border-brand-500/20 transition text-sm font-semibold text-brand-300 disabled:opacity-50"
+              >
+                <span>Store Owner</span>
+                {loadingTarget === 'store_owner' && <div className="w-4 h-4 border-2 border-brand-500/30 border-t-brand-500 rounded-full animate-spin" />}
+              </button>
+              <button
+                type="button"
+                disabled={loading}
+                onClick={() => handleDemoLogin('store_sales_person')}
+                className="flex items-center justify-between text-left p-3 rounded-lg bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/20 transition text-sm font-semibold text-emerald-300 disabled:opacity-50"
+              >
+                <span>Store Sales Person</span>
+                {loadingTarget === 'store_sales_person' && <div className="w-4 h-4 border-2 border-emerald-500/30 border-t-emerald-500 rounded-full animate-spin" />}
+              </button>
+            </div>
+          </div>
         </div>
 
         <p className="text-center text-xs text-slate-500 mt-6">

@@ -3,152 +3,138 @@
  * Central role definitions, permissions, and access control helpers for Smartventory RBAC.
  *
  * Roles:
- *   admin              — Full system control and configuration
- *   inventory_manager   — Responsible for overall inventory operations
- *   warehouse_staff     — Handles day-to-day stock movements
- *   purchasing_officer  — Manages procurement and supplier relationships
- *   sales_user          — Handles customer orders and sales-related inventory
- *   management          — Monitors business performance without modifying data
+ *   super_admin          — Controls the entire platform and all stores
+ *   store_owner          — Manages their own store and staff
+ *   store_sales_person   — Handles daily sales and stock operations
  */
 
 // ─── Role Definitions ─────────────────────────────────────────────────────────
 
 export const ROLES = {
-  admin: {
-    id: 'admin',
-    label: 'Administrator',
-    description: 'Full system control and configuration',
+  super_admin: {
+    id: 'super_admin',
+    label: 'Super Admin',
+    description: 'Controls the entire platform and all stores',
     color: 'rose',
     priority: 0,
   },
-  inventory_manager: {
-    id: 'inventory_manager',
-    label: 'Inventory Manager',
-    description: 'Responsible for overall inventory operations',
+  store_owner: {
+    id: 'store_owner',
+    label: 'Store Owner',
+    description: 'Manages their own store and staff',
     color: 'brand',
     priority: 1,
   },
-  warehouse_staff: {
-    id: 'warehouse_staff',
-    label: 'Warehouse Staff',
-    description: 'Handles day-to-day stock movements',
-    color: 'amber',
-    priority: 2,
-  },
-  purchasing_officer: {
-    id: 'purchasing_officer',
-    label: 'Purchasing Officer',
-    description: 'Manages procurement and supplier relationships',
-    color: 'blue',
-    priority: 3,
-  },
-  sales_user: {
-    id: 'sales_user',
-    label: 'Sales User',
-    description: 'Handles customer orders and sales-related inventory',
+  store_sales_person: {
+    id: 'store_sales_person',
+    label: 'Store Sales Person',
+    description: 'Handles daily sales and stock operations',
     color: 'emerald',
-    priority: 4,
-  },
-  management: {
-    id: 'management',
-    label: 'Management',
-    description: 'Monitors business performance without modifying data',
-    color: 'violet',
-    priority: 5,
+    priority: 2,
   },
 };
 
 // ─── Permission Map ───────────────────────────────────────────────────────────
 // Each key is a permission string; value is the set of roles that have it.
+// Note: super_admin implicitly has ALL permissions (handled in hasPermission helper)
 
 const P = {
   // Dashboard
-  'dashboard.view':            ['admin', 'inventory_manager', 'warehouse_staff', 'purchasing_officer', 'sales_user', 'management'],
-  'dashboard.full':            ['admin', 'inventory_manager', 'management'],
+  'dashboard.view':            ['store_owner', 'store_sales_person'],
+  'dashboard.full':            ['store_owner'],
 
   // Products
-  'products.view':             ['admin', 'inventory_manager', 'warehouse_staff', 'purchasing_officer', 'sales_user', 'management'],
-  'products.create':           ['admin', 'inventory_manager'],
-  'products.edit':             ['admin', 'inventory_manager'],
-  'products.delete':           ['admin', 'inventory_manager'],
+  'products.view':             ['store_owner', 'store_sales_person'],
+  'products.create':           ['store_owner'],
+  'products.edit':             ['store_owner'],
+  'products.delete':           ['store_owner'],
 
   // Categories
-  'categories.view':           ['admin', 'inventory_manager', 'warehouse_staff', 'purchasing_officer', 'sales_user', 'management'],
-  'categories.create':         ['admin', 'inventory_manager'],
-  'categories.edit':           ['admin', 'inventory_manager'],
-  'categories.delete':         ['admin', 'inventory_manager'],
+  'categories.view':           ['store_owner', 'store_sales_person'],
+  'categories.create':         ['store_owner'],
+  'categories.edit':           ['store_owner'],
+  'categories.delete':         ['store_owner'],
 
   // Orders — Sales
-  'orders.view_sales':         ['admin', 'inventory_manager', 'sales_user', 'management'],
-  'orders.create_sales':       ['admin', 'inventory_manager', 'sales_user'],
+  'orders.view_sales':         ['store_owner', 'store_sales_person'],
+  'orders.create_sales':       ['store_owner', 'store_sales_person'],
 
   // Orders — Purchase
-  'orders.view_purchase':      ['admin', 'inventory_manager', 'purchasing_officer', 'management'],
-  'orders.create_purchase':    ['admin', 'inventory_manager', 'purchasing_officer'],
+  'orders.view_purchase':      ['store_owner'],
+  'orders.create_purchase':    ['store_owner'],
 
   // Orders — All
-  'orders.view_all':           ['admin', 'inventory_manager', 'management'],
-  'orders.edit':               ['admin', 'inventory_manager'],
+  'orders.view_all':           ['store_owner', 'store_sales_person'],
+  'orders.edit':               ['store_owner'],
 
   // Stock Operations
-  'stock.in':                  ['admin', 'inventory_manager', 'warehouse_staff'],
-  'stock.out':                 ['admin', 'inventory_manager', 'warehouse_staff'],
-  'stock.transfer_create':     ['admin', 'inventory_manager', 'warehouse_staff'],
-  'stock.transfer_approve':    ['admin', 'inventory_manager'],
-  'stock.adjustment':          ['admin', 'inventory_manager'],
-  'stock.count':               ['admin', 'inventory_manager', 'warehouse_staff'],
+  'stock.in':                  ['store_owner', 'store_sales_person'],
+  'stock.out':                 ['store_owner', 'store_sales_person'],
+  'stock.transfer_create':     ['store_owner', 'store_sales_person'],
+  'stock.transfer_approve':    ['store_owner'],
+  'stock.adjustment':          ['store_owner', 'store_sales_person'],
+  'stock.count':               ['store_owner', 'store_sales_person'],
 
   // Suppliers
-  'suppliers.view':            ['admin', 'inventory_manager', 'purchasing_officer', 'management'],
-  'suppliers.create':          ['admin', 'inventory_manager', 'purchasing_officer'],
-  'suppliers.edit':            ['admin', 'inventory_manager', 'purchasing_officer'],
-  'suppliers.delete':          ['admin'],
+  'suppliers.view':            ['store_owner'],
+  'suppliers.create':          ['store_owner'],
+  'suppliers.edit':            ['store_owner'],
+  'suppliers.delete':          ['store_owner'],
 
   // Warehouses
-  'warehouses.view':           ['admin', 'inventory_manager', 'warehouse_staff', 'management'],
-  'warehouses.manage':         ['admin'],
+  'warehouses.view':           ['store_owner', 'store_sales_person'],
+  'warehouses.manage':         ['store_owner'],
 
   // Reports & Analytics
-  'reports.view':              ['admin', 'inventory_manager', 'management'],
-  'reports.sales':             ['admin', 'inventory_manager', 'sales_user', 'management'],
-  'reports.purchase':          ['admin', 'inventory_manager', 'purchasing_officer', 'management'],
-  'reports.warehouse':         ['admin', 'inventory_manager', 'warehouse_staff', 'management'],
-  'reports.export':            ['admin', 'inventory_manager', 'management'],
+  'reports.view':              ['store_owner'],
+  'reports.sales':             ['store_owner'],
+  'reports.purchase':          ['store_owner'],
+  'reports.warehouse':         ['store_owner'],
+  'reports.export':            ['store_owner'],
 
   // Alerts
-  'alerts.view':               ['admin', 'inventory_manager', 'warehouse_staff', 'management'],
+  'alerts.view':               ['store_owner'],
 
   // Team / User Management
-  'team.view':                 ['admin'],
-  'team.invite':               ['admin'],
-  'team.edit_roles':           ['admin'],
-  'team.remove':               ['admin'],
+  'team.view':                 ['store_owner'],
+  'team.invite':               ['store_owner'],
+  'team.edit_roles':           ['store_owner'],
+  'team.remove':               ['store_owner'],
 
   // System Settings
-  'settings.system':           ['admin'],
-  'settings.personal':         ['admin', 'inventory_manager', 'warehouse_staff', 'purchasing_officer', 'sales_user', 'management'],
+  'settings.system':           ['store_owner'],
+  'settings.personal':         ['store_owner', 'store_sales_person'],
 
   // Billing
-  'billing.view':              ['admin'],
-  'billing.manage':            ['admin'],
+  'billing.view':              ['store_owner', 'store_sales_person'],
+  'billing.manage':            ['store_owner'],
 
   // Audit Log
-  'audit.view':                ['admin'],
+  'audit.view':                ['store_owner'],
 
   // Export
-  'export.csv':                ['admin', 'inventory_manager', 'management'],
+  'export.csv':                ['store_owner'],
+
+  // Platform Administration
+  'platform.users.manage':     [], // Only super_admin via override
+  'platform.stores.manage':    [], // Only super_admin via override
 };
 
 // ─── Permission Helpers ───────────────────────────────────────────────────────
 
-/**
- * Check if a role has a specific permission.
- * @param {string} role - One of the ROLES keys (e.g. 'admin', 'sales_user')
- * @param {string} permission - A permission string from the P map (e.g. 'products.create')
- * @returns {boolean}
- */
 export function hasPermission(role, permission) {
   if (!role || !permission) return false;
+  if (role === 'super_admin') {
+    if (
+      permission.startsWith('team.') ||
+      permission.startsWith('billing.') ||
+      permission.startsWith('alerts.')
+    ) {
+      return false; // Super admin cannot manage store teams, billing, or see alerts
+    }
+    return true; // Super admin overrides everything else
+  }
+
   const allowed = P[permission];
   if (!allowed) return false;
   return allowed.includes(role);
@@ -161,6 +147,8 @@ export function hasPermission(role, permission) {
  */
 export function getPermissionsForRole(role) {
   if (!role) return [];
+  if (role === 'super_admin') return Object.keys(P); // Returns all keys
+  
   return Object.entries(P)
     .filter(([, roles]) => roles.includes(role))
     .map(([perm]) => perm);
@@ -173,6 +161,7 @@ export function getPermissionsForRole(role) {
  * @returns {boolean}
  */
 export function hasAnyPermission(role, permissions) {
+  if (role === 'super_admin') return true;
   return permissions.some((p) => hasPermission(role, p));
 }
 
@@ -194,16 +183,17 @@ const ROUTE_PERMISSIONS = {
   '/suppliers':    ['suppliers.view'],
   '/warehouses':   ['warehouses.view'],
   '/audit-log':    ['audit.view'],
+  '/platform/users': ['platform.users.manage'],
+  '/platform/stores': ['platform.stores.manage'],
 };
 
-/**
- * Check if a role can access a given route.
- * @param {string} role
- * @param {string} route - The route path (e.g. '/products')
- * @returns {boolean}
- */
-export function canAccessRoute(role, route) {
+export function canAccessRoute(role, route, planId = 'free') {
   if (!role || !route) return false;
+  if (role === 'super_admin') {
+    if (route === '/team' || route === '/billing' || route === '/alerts') return false; // Super admin cannot access store team page, billing page, or alerts page
+    return true;
+  }
+
   const required = ROUTE_PERMISSIONS[route];
   if (!required) return true; // Unknown routes default to accessible (caught by router)
   return hasAnyPermission(role, required);
@@ -229,12 +219,9 @@ export function getDefaultRoute(role) {
  */
 export function getRoleColorClasses(roleId) {
   const colorMap = {
-    admin:              'bg-rose-500/15 text-rose-600 border-rose-200',
-    inventory_manager:  'bg-indigo-500/15 text-indigo-600 border-indigo-200',
-    warehouse_staff:    'bg-amber-500/15 text-amber-600 border-amber-200',
-    purchasing_officer: 'bg-blue-500/15 text-blue-600 border-blue-200',
-    sales_user:         'bg-emerald-500/15 text-emerald-600 border-emerald-200',
-    management:         'bg-violet-500/15 text-violet-600 border-violet-200',
+    super_admin:        'bg-rose-500/15 text-rose-600 border-rose-200',
+    store_owner:        'bg-brand-500/15 text-brand-600 border-brand-200',
+    store_sales_person: 'bg-emerald-500/15 text-emerald-600 border-emerald-200',
   };
   return colorMap[roleId] || 'bg-slate-500/15 text-slate-600 border-slate-200';
 }
@@ -244,12 +231,9 @@ export function getRoleColorClasses(roleId) {
  */
 export function getRoleSidebarClasses(roleId) {
   const colorMap = {
-    admin:              'bg-rose-500/20 text-rose-300',
-    inventory_manager:  'bg-brand-500/20 text-brand-300',
-    warehouse_staff:    'bg-amber-500/20 text-amber-300',
-    purchasing_officer: 'bg-blue-500/20 text-blue-300',
-    sales_user:         'bg-emerald-500/20 text-emerald-300',
-    management:         'bg-violet-500/20 text-violet-300',
+    super_admin:        'bg-rose-500/20 text-rose-300',
+    store_owner:        'bg-brand-500/20 text-brand-300',
+    store_sales_person: 'bg-emerald-500/20 text-emerald-300',
   };
   return colorMap[roleId] || 'bg-slate-500/20 text-slate-300';
 }

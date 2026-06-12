@@ -1,4 +1,7 @@
 import { useState } from 'react';
+import { useForm, Controller } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import * as z from 'zod';
 import {
   IconPlus, IconSearch, IconEdit, IconTrash, IconFilter,
   IconPackage, IconAlertTriangle,
@@ -9,19 +12,48 @@ import UpgradeBanner from '../components/ui/UpgradeBanner';
 import { useInventory } from '../context/InventoryContext';
 import { useSubscription } from '../context/SubscriptionContext';
 import { useAuth } from '../context/AuthContext';
+import { Input } from '../components/ui/input';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select';
 
-const EMPTY = { name: '', sku: '', category: '', price: '', cost: '', stock: '', minStock: '', status: 'active' };
+const productSchema = z.object({
+  name: z.string().min(1, { message: "Name is required" }),
+  sku: z.string().min(1, { message: "SKU is required" }),
+  category: z.string().min(1, { message: "Category is required" }),
+  price: z.coerce.number().min(0, { message: "Price must be >= 0" }),
+  cost: z.coerce.number().min(0, { message: "Cost must be >= 0" }),
+  stock: z.coerce.number().int({ message: "Must be an integer" }).min(0, { message: "Stock must be >= 0" }),
+  minStock: z.coerce.number().int({ message: "Must be an integer" }).min(0, { message: "Min Stock must be >= 0" }),
+  status: z.enum(['active', 'inactive'])
+});
 
 export default function Products() {
-  const { products, addProduct, updateProduct, deleteProduct, categories } = useInventory();
+  const { products, addProduct, updateProduct, deleteProduct, categories, allStores } = useInventory();
   const { plan, withinLimit } = useSubscription();
-  const { hasPermission } = useAuth();
+  const { user, hasPermission } = useAuth();
+  const role = user?.role;
   const [search, setSearch] = useState('');
   const [filterCat, setFilterCat] = useState('all');
   const [filterStatus, setFilterStatus] = useState('all');
+
+  // Store filter states for admin user
+  const [storeSearch, setStoreSearch] = useState('');
+  const [storeTypeFilter, setStoreTypeFilter] = useState('all');
+  const [selectedStore, setSelectedStore] = useState(null);
+  const [showStoreDropdown, setShowStoreDropdown] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editTarget, setEditTarget] = useState(null);
-  const [form, setForm] = useState(EMPTY);
+
+  const {
+    register,
+    handleSubmit,
+    reset,
+    control,
+    formState: { errors, isSubmitting }
+  } = useForm({
+    resolver: zodResolver(productSchema),
+    defaultValues: { name: '', sku: '', category: '', price: 0, cost: 0, stock: 0, minStock: 0, status: 'active' }
+  });
+
   const [deleteConfirm, setDeleteConfirm] = useState(null);
 
   const canCreate = hasPermission('products.create');
@@ -29,43 +61,50 @@ export default function Products() {
   const canDelete = hasPermission('products.delete');
   const atLimit = !withinLimit('products', products.length);
 
+  // Derive store suggestions based on search text and type filter
+  const filteredStores = (allStores || []).filter(store => {
+    const matchType = storeTypeFilter === 'all' || store.type === storeTypeFilter;
+    const matchSearch = (store.name || '').toLowerCase().includes(storeSearch.toLowerCase()) || (store.id || '').toLowerCase().includes(storeSearch.toLowerCase());
+    return matchType && matchSearch;
+  });
+
+  const storeSuggestions = filteredStores.slice(0, 10); // Show top 5-10 suggestions by default
+
   const filtered = products.filter(p => {
     const matchSearch = p.name.toLowerCase().includes(search.toLowerCase()) || p.sku.toLowerCase().includes(search.toLowerCase());
     const matchCat = filterCat === 'all' || p.category === filterCat;
     const matchStatus = filterStatus === 'all' || p.status === filterStatus;
-    return matchSearch && matchCat && matchStatus;
+
+    // Store filtering for super admin
+    let matchStore = true;
+    if (role === 'super_admin' && selectedStore) {
+      matchStore = p.orgId === selectedStore.id;
+    }
+    return matchSearch && matchCat && matchStatus && matchStore;
   });
 
   const openAdd = () => {
     setEditTarget(null);
-    setForm(EMPTY);
+    reset({ name: '', sku: '', category: '', price: 0, cost: 0, stock: 0, minStock: 0, status: 'active' });
     setIsModalOpen(true);
   };
   const openEdit = (p) => {
     setEditTarget(p);
-    setForm({ name: p.name, sku: p.sku, category: p.category, price: p.price, cost: p.cost, stock: p.stock, minStock: p.minStock, status: p.status });
+    reset({ name: p.name, sku: p.sku, category: p.category, price: p.price, cost: p.cost, stock: p.stock, minStock: p.minStock, status: p.status });
     setIsModalOpen(true);
   };
-  const handleSave = (e) => {
-    e.preventDefault();
-    const payload = {
-      ...form,
-      price: parseFloat(form.price) || 0,
-      cost: parseFloat(form.cost) || 0,
-      stock: parseInt(form.stock) || 0,
-      minStock: parseInt(form.minStock) || 0,
-    };
+  const onValidSave = (data) => {
     if (editTarget) {
-      updateProduct(editTarget.id, payload);
+      updateProduct(editTarget.id, data);
     } else {
-      addProduct(payload);
+      addProduct(data);
     }
     setIsModalOpen(false);
   };
 
   const stockStatus = (p) => {
     if (p.stock === 0) return 'out';
-    if (p.stock <= p.minStock) return 'low';
+    if (role !== 'super_admin' && p.stock <= p.minStock) return 'low';
     return 'active';
   };
 
@@ -78,29 +117,136 @@ export default function Products() {
       )}
 
       <div className="card">
+        {/* Admin Store Filter Bar */}
+        {role === 'super_admin' && (
+          <div className="flex flex-wrap items-center gap-3 border-b border-slate-100 pb-4 mb-4">
+            <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">Filter by Store:</span>
+
+            {/* Store Type Filter */}
+            <Select
+              value={storeTypeFilter}
+              onValueChange={val => {
+                setStoreTypeFilter(val);
+                if (selectedStore && val !== 'all' && selectedStore.type !== val) {
+                  setSelectedStore(null);
+                  setStoreSearch('');
+                }
+              }}
+            >
+              <SelectTrigger className="w-[140px] text-xs h-9">
+                <SelectValue placeholder="All Store Types" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Store Types</SelectItem>
+                <SelectItem value="Retail">Retail</SelectItem>
+                <SelectItem value="Wholesale">Wholesale</SelectItem>
+                <SelectItem value="Warehouse">Warehouse</SelectItem>
+              </SelectContent>
+            </Select>
+
+            {/* Store Search with Suggestions */}
+            <div className="relative">
+              <Input
+                type="text"
+                placeholder="Search store name..."
+                value={storeSearch}
+                onChange={e => {
+                  setStoreSearch(e.target.value);
+                  setShowStoreDropdown(true);
+                }}
+                onFocus={() => setShowStoreDropdown(true)}
+                onBlur={() => setTimeout(() => setShowStoreDropdown(false), 200)}
+                className="text-xs h-9 w-56 pr-8"
+              />
+              {selectedStore && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSelectedStore(null);
+                    setStoreSearch('');
+                  }}
+                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 text-xs"
+                >
+                  ✕
+                </button>
+              )}
+              {showStoreDropdown && (
+                <div className="absolute left-0 mt-1 w-64 bg-white border border-slate-200 rounded shadow-lg z-50 max-h-60 overflow-y-auto text-xs">
+                  <div className="p-2 border-b border-slate-100 font-semibold text-slate-400">
+                    {storeSuggestions.length === 0 ? 'No stores found' : `Suggestions (${storeSuggestions.length})`}
+                  </div>
+                  {storeSuggestions.map(store => (
+                    <button
+                      type="button"
+                      key={store.id}
+                      onClick={() => {
+                        setSelectedStore(store);
+                        setStoreSearch(store.name);
+                        setShowStoreDropdown(false);
+                      }}
+                      className="w-full text-left px-3 py-2 hover:bg-slate-50 flex items-center justify-between border-b border-slate-50 last:border-0"
+                    >
+                      <div className="truncate pr-2">
+                        <p className="font-semibold text-slate-700 truncate">{store.name}</p>
+                        <p className="text-[10px] text-slate-400 font-mono">ID: {store.id}</p>
+                      </div>
+                      <span className="text-[9px] bg-slate-100 text-slate-500 px-1.5 py-0.5 rounded uppercase font-bold shrink-0">
+                        {store.type}
+                      </span>
+                    </button>
+                  ))}
+                  {selectedStore && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setSelectedStore(null);
+                        setStoreSearch('');
+                        setShowStoreDropdown(false);
+                      }}
+                      className="w-full text-left px-3 py-2 bg-slate-50 text-slate-600 font-medium hover:bg-slate-100 text-center border-t border-slate-100"
+                    >
+                      Clear Selection
+                    </button>
+                  )}
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
         {/* Toolbar */}
         <div className="flex flex-wrap items-center gap-3 mb-5">
           <div className="relative flex-1 min-w-48">
             <IconSearch size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-            <input
+            <Input
               value={search}
               onChange={e => setSearch(e.target.value)}
-              className="input pl-9"
+              className="pl-9 h-9"
               placeholder="Search products or SKU…"
             />
           </div>
 
           <div className="flex items-center gap-2">
             <IconFilter size={15} className="text-slate-400" />
-            <select value={filterCat} onChange={e => setFilterCat(e.target.value)} className="input w-auto text-xs py-2">
-              <option value="all">All Categories</option>
-              {uniqueCategories.map(c => <option key={c} value={c}>{c}</option>)}
-            </select>
-            <select value={filterStatus} onChange={e => setFilterStatus(e.target.value)} className="input w-auto text-xs py-2">
-              <option value="all">All Status</option>
-              <option value="active">Active</option>
-              <option value="inactive">Inactive</option>
-            </select>
+            <Select value={filterCat} onValueChange={val => setFilterCat(val)}>
+              <SelectTrigger className="w-[140px] text-xs h-9">
+                <SelectValue placeholder="All Categories" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Categories</SelectItem>
+                {uniqueCategories.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}
+              </SelectContent>
+            </Select>
+            <Select value={filterStatus} onValueChange={val => setFilterStatus(val)}>
+              <SelectTrigger className="w-[120px] text-xs h-9">
+                <SelectValue placeholder="All Status" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Status</SelectItem>
+                <SelectItem value="active">Active</SelectItem>
+                <SelectItem value="inactive">Inactive</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
 
           {canCreate && (
@@ -118,9 +264,13 @@ export default function Products() {
         <div className="flex gap-4 text-xs text-slate-500 mb-4 flex-wrap">
           <span className="font-medium">{filtered.length} products</span>
           <span className="text-slate-300">|</span>
-          <span>{products.filter(p => p.stock === 0).length} out of stock</span>
-          <span className="text-slate-300">|</span>
-          <span className="text-amber-500">{products.filter(p => p.stock > 0 && p.stock <= p.minStock).length} low stock</span>
+          <span>{filtered.filter(p => p.stock === 0).length} out of stock</span>
+          {role !== 'super_admin' && (
+            <>
+              <span className="text-slate-300">|</span>
+              <span className="text-amber-500">{filtered.filter(p => p.stock > 0 && p.stock <= p.minStock).length} low stock</span>
+            </>
+          )}
         </div>
 
         {/* Table */}
@@ -128,6 +278,9 @@ export default function Products() {
           <table className="w-full text-sm">
             <thead>
               <tr className="bg-slate-50 text-left">
+                {role === 'super_admin' && (
+                  <th className="px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">Store</th>
+                )}
                 <th className="px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">Product</th>
                 <th className="px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">SKU</th>
                 <th className="px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">Category</th>
@@ -142,6 +295,14 @@ export default function Products() {
             <tbody>
               {filtered.map(p => (
                 <tr key={p.id} className="border-t border-slate-50 hover:bg-slate-50/50 transition-colors">
+                  {role === 'super_admin' && (
+                    <td className="px-4 py-3">
+                      <div className="flex flex-col">
+                        <span className="font-semibold text-slate-700">{p.orgName}</span>
+                        <span className="text-[10px] text-slate-400 font-mono">ID: {p.orgId}</span>
+                      </div>
+                    </td>
+                  )}
                   <td className="px-4 py-3">
                     <div className="flex items-center gap-3">
                       <div className="w-8 h-8 rounded-lg bg-brand-50 flex items-center justify-center flex-shrink-0">
@@ -206,53 +367,78 @@ export default function Products() {
 
       {/* Add/Edit Modal */}
       {(canCreate || canEdit) && (
-        <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} title={editTarget ? 'Edit Product' : 'Add Product'}>
-          <form onSubmit={handleSave} className="space-y-4">
+        <Modal 
+          isOpen={isModalOpen} 
+          onClose={() => setIsModalOpen(false)} 
+          title={editTarget ? 'Edit Product' : 'Add Product'}
+          footer={
+            <>
+              <button type="button" onClick={() => setIsModalOpen(false)} className="btn-secondary" disabled={isSubmitting}>Cancel</button>
+              <button type="submit" form="product-form" className="btn-primary" disabled={isSubmitting}>
+                {editTarget ? 'Save Changes' : 'Add Product'}
+              </button>
+            </>
+          }
+        >
+          <form id="product-form" onSubmit={handleSubmit(onValidSave)} className="space-y-4">
             <div className="grid grid-cols-2 gap-4">
               <div className="col-span-2">
                 <label className="label">Product Name</label>
-                <input required className="input" value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} placeholder="e.g. Wireless Earbuds Pro" />
+                <Input {...register('name')} placeholder="e.g. Wireless Earbuds Pro" />
+                {errors.name && <p className="text-xs text-rose-500 mt-1">{errors.name.message}</p>}
               </div>
               <div>
                 <label className="label">SKU</label>
-                <input required className="input" value={form.sku} onChange={e => setForm(f => ({ ...f, sku: e.target.value }))} placeholder="e.g. WEP-001" />
+                <Input {...register('sku')} placeholder="e.g. WEP-001" />
+                {errors.sku && <p className="text-xs text-rose-500 mt-1">{errors.sku.message}</p>}
               </div>
               <div>
                 <label className="label">Category</label>
-                <input required className="input" value={form.category} onChange={e => setForm(f => ({ ...f, category: e.target.value }))} placeholder="e.g. Electronics" list="cat-list" />
+                <Input {...register('category')} placeholder="e.g. Electronics" list="cat-list" />
                 <datalist id="cat-list">
                   {categories.map(c => <option key={c.id} value={c.name} />)}
                 </datalist>
+                {errors.category && <p className="text-xs text-rose-500 mt-1">{errors.category.message}</p>}
               </div>
               <div>
                 <label className="label">Selling Price ($)</label>
-                <input required type="number" step="0.01" min="0" className="input" value={form.price} onChange={e => setForm(f => ({ ...f, price: e.target.value }))} placeholder="0.00" />
+                <Input type="number" step="0.01" min="0" {...register('price')} placeholder="0.00" />
+                {errors.price && <p className="text-xs text-rose-500 mt-1">{errors.price.message}</p>}
               </div>
               <div>
                 <label className="label">Cost Price ($)</label>
-                <input required type="number" step="0.01" min="0" className="input" value={form.cost} onChange={e => setForm(f => ({ ...f, cost: e.target.value }))} placeholder="0.00" />
+                <Input type="number" step="0.01" min="0" {...register('cost')} placeholder="0.00" />
+                {errors.cost && <p className="text-xs text-rose-500 mt-1">{errors.cost.message}</p>}
               </div>
               <div>
                 <label className="label">Stock Quantity</label>
-                <input required type="number" min="0" className="input" value={form.stock} onChange={e => setForm(f => ({ ...f, stock: e.target.value }))} placeholder="0" />
+                <Input type="number" min="0" {...register('stock')} placeholder="0" />
+                {errors.stock && <p className="text-xs text-rose-500 mt-1">{errors.stock.message}</p>}
               </div>
               <div>
                 <label className="label">Min Stock Threshold</label>
-                <input required type="number" min="0" className="input" value={form.minStock} onChange={e => setForm(f => ({ ...f, minStock: e.target.value }))} placeholder="0" />
+                <Input type="number" min="0" {...register('minStock')} placeholder="0" />
+                {errors.minStock && <p className="text-xs text-rose-500 mt-1">{errors.minStock.message}</p>}
               </div>
               <div className="col-span-2">
                 <label className="label">Status</label>
-                <select className="input" value={form.status} onChange={e => setForm(f => ({ ...f, status: e.target.value }))}>
-                  <option value="active">Active</option>
-                  <option value="inactive">Inactive</option>
-                </select>
+                <Controller
+                  name="status"
+                  control={control}
+                  render={({ field }) => (
+                    <Select value={field.value} onValueChange={field.onChange}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select status" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="active">Active</SelectItem>
+                        <SelectItem value="inactive">Inactive</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  )}
+                />
+                {errors.status && <p className="text-xs text-rose-500 mt-1">{errors.status.message}</p>}
               </div>
-            </div>
-            <div className="flex gap-3 pt-2">
-              <button type="button" onClick={() => setIsModalOpen(false)} className="btn-secondary flex-1">Cancel</button>
-              <button type="submit" className="btn-primary flex-1">
-                {editTarget ? 'Save Changes' : 'Add Product'}
-              </button>
             </div>
           </form>
         </Modal>
@@ -260,20 +446,31 @@ export default function Products() {
 
       {/* Delete Confirm Modal */}
       {canDelete && (
-        <Modal isOpen={!!deleteConfirm} onClose={() => setDeleteConfirm(null)} title="Delete Product" size="sm">
-          <p className="text-sm text-slate-600 mb-6">
-            Are you sure you want to delete <strong>{deleteConfirm?.name}</strong>? This action cannot be undone.
-          </p>
-          <div className="flex gap-3">
-            <button onClick={() => setDeleteConfirm(null)} className="btn-secondary flex-1">Cancel</button>
-            <button
-              onClick={() => { deleteProduct(deleteConfirm.id); setDeleteConfirm(null); }}
-              className="btn-danger flex-1"
-            >
-              Delete
-            </button>
-          </div>
-        </Modal>
+        <Modal 
+          isOpen={!!deleteConfirm} 
+          onClose={() => setDeleteConfirm(null)} 
+          title="Delete Product" 
+          size="sm"
+          icon={
+            <div className="w-10 h-10 rounded-full bg-rose-100 flex items-center justify-center text-rose-600">
+              <IconAlertTriangle size={24} stroke={1.5} />
+            </div>
+          }
+          description={
+            <>Are you sure you want to delete <strong>{deleteConfirm?.name}</strong>? This action cannot be undone.</>
+          }
+          footer={
+            <>
+              <button onClick={() => setDeleteConfirm(null)} className="btn-secondary">Cancel</button>
+              <button
+                onClick={() => { deleteProduct(deleteConfirm.id); setDeleteConfirm(null); }}
+                className="btn-danger"
+              >
+                Delete
+              </button>
+            </>
+          }
+        />
       )}
     </div>
   );

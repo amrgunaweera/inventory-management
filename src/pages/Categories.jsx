@@ -1,13 +1,22 @@
 import { useState } from 'react';
-import { IconPlus, IconEdit, IconTrash, IconTag } from '@tabler/icons-react';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import * as z from 'zod';
+import { IconPlus, IconEdit, IconTrash, IconTag, IconAlertTriangle } from '@tabler/icons-react';
 import Modal from '../components/ui/Modal';
 import UpgradeBanner from '../components/ui/UpgradeBanner';
 import { useInventory } from '../context/InventoryContext';
 import { useSubscription } from '../context/SubscriptionContext';
 import { useAuth } from '../context/AuthContext';
+import { Input } from '../components/ui/input';
 
 const COLORS = ['#6366f1','#f59e0b','#10b981','#ec4899','#f97316','#8b5cf6','#06b6d4','#ef4444','#84cc16','#14b8a6'];
-const EMPTY = { name: '', description: '', color: COLORS[0] };
+
+const categorySchema = z.object({
+  name: z.string().min(1, { message: "Name is required" }),
+  description: z.string().optional(),
+  color: z.string()
+});
 
 export default function Categories() {
   const { categories, addCategory, updateCategory, deleteCategory, products } = useInventory();
@@ -18,27 +27,38 @@ export default function Categories() {
   const canDelete = hasPermission('categories.delete');
   const [isOpen, setIsOpen] = useState(false);
   const [editTarget, setEditTarget] = useState(null);
-  const [form, setForm] = useState(EMPTY);
+
+  const {
+    register,
+    handleSubmit,
+    reset,
+    watch,
+    setValue,
+    formState: { errors, isSubmitting }
+  } = useForm({
+    resolver: zodResolver(categorySchema),
+    defaultValues: { name: '', description: '', color: COLORS[0] }
+  });
+  
   const [deleteConfirm, setDeleteConfirm] = useState(null);
 
   const atLimit = !withinLimit('categories', categories.length);
 
   const openAdd = () => {
     setEditTarget(null);
-    setForm(EMPTY);
+    reset({ name: '', description: '', color: COLORS[0] });
     setIsOpen(true);
   };
   const openEdit = (c) => {
     setEditTarget(c);
-    setForm({ name: c.name, description: c.description, color: c.color });
+    reset({ name: c.name, description: c.description || '', color: c.color || COLORS[0] });
     setIsOpen(true);
   };
-  const handleSave = (e) => {
-    e.preventDefault();
+  const onValidSave = (data) => {
     if (editTarget) {
-      updateCategory(editTarget.id, form);
+      updateCategory(editTarget.id, data);
     } else {
-      addCategory(form);
+      addCategory(data);
     }
     setIsOpen(false);
   };
@@ -68,7 +88,7 @@ export default function Categories() {
           {categories.map(cat => {
             const count = productCount(cat.name);
             return (
-              <div key={cat.id} className="flex items-center gap-4 p-4 rounded-xl border border-slate-100 hover:border-slate-200 hover:shadow-sm transition-all duration-200 group">
+              <div key={cat.id} className="flex items-center gap-4 p-4 rounded-xl border border-slate-100 hover:border-slate-200 transition-all duration-200 group">
                 <div
                   className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0"
                   style={{ backgroundColor: cat.color + '20' }}
@@ -107,15 +127,28 @@ export default function Categories() {
         )}
       </div>
 
-      <Modal isOpen={isOpen} onClose={() => setIsOpen(false)} title={editTarget ? 'Edit Category' : 'Add Category'} size="sm">
-        <form onSubmit={handleSave} className="space-y-4">
+      <Modal 
+        isOpen={isOpen} 
+        onClose={() => setIsOpen(false)} 
+        title={editTarget ? 'Edit Category' : 'Add Category'} 
+        size="sm"
+        footer={
+          <>
+            <button type="button" onClick={() => setIsOpen(false)} className="btn-secondary" disabled={isSubmitting}>Cancel</button>
+            <button type="submit" form="category-form" className="btn-primary" disabled={isSubmitting}>{editTarget ? 'Save' : 'Add'}</button>
+          </>
+        }
+      >
+        <form id="category-form" onSubmit={handleSubmit(onValidSave)} className="space-y-4">
           <div>
             <label className="label">Name</label>
-            <input required className="input" value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} placeholder="e.g. Electronics" />
+            <Input {...register('name')} placeholder="e.g. Electronics" />
+            {errors.name && <p className="text-xs text-rose-500 mt-1">{errors.name.message}</p>}
           </div>
           <div>
             <label className="label">Description</label>
-            <input className="input" value={form.description} onChange={e => setForm(f => ({ ...f, description: e.target.value }))} placeholder="Short description…" />
+            <Input {...register('description')} placeholder="Short description…" />
+            {errors.description && <p className="text-xs text-rose-500 mt-1">{errors.description.message}</p>}
           </div>
           <div>
             <label className="label">Color</label>
@@ -124,29 +157,37 @@ export default function Categories() {
                 <button
                   key={c}
                   type="button"
-                  onClick={() => setForm(f => ({ ...f, color: c }))}
+                  onClick={() => setValue('color', c)}
                   className="w-7 h-7 rounded-full border-2 transition-all"
-                  style={{ backgroundColor: c, borderColor: form.color === c ? '#0f172a' : 'transparent' }}
+                  style={{ backgroundColor: c, borderColor: watch('color') === c ? '#0f172a' : 'transparent' }}
                 />
               ))}
             </div>
-          </div>
-          <div className="flex gap-3 pt-2">
-            <button type="button" onClick={() => setIsOpen(false)} className="btn-secondary flex-1">Cancel</button>
-            <button type="submit" className="btn-primary flex-1">{editTarget ? 'Save' : 'Add'}</button>
+            {errors.color && <p className="text-xs text-rose-500 mt-1">{errors.color.message}</p>}
           </div>
         </form>
       </Modal>
 
-      <Modal isOpen={!!deleteConfirm} onClose={() => setDeleteConfirm(null)} title="Delete Category" size="sm">
-        <p className="text-sm text-slate-600 mb-6">
-          Delete <strong>{deleteConfirm?.name}</strong>? Products in this category won't be deleted.
-        </p>
-        <div className="flex gap-3">
-          <button onClick={() => setDeleteConfirm(null)} className="btn-secondary flex-1">Cancel</button>
-          <button onClick={() => { deleteCategory(deleteConfirm.id); setDeleteConfirm(null); }} className="btn-danger flex-1">Delete</button>
-        </div>
-      </Modal>
+      <Modal 
+        isOpen={!!deleteConfirm} 
+        onClose={() => setDeleteConfirm(null)} 
+        title="Delete Category" 
+        size="sm"
+        icon={
+          <div className="w-10 h-10 rounded-full bg-rose-100 flex items-center justify-center text-rose-600">
+            <IconAlertTriangle size={24} stroke={1.5} />
+          </div>
+        }
+        description={
+          <>Delete <strong>{deleteConfirm?.name}</strong>? Products in this category won't be deleted.</>
+        }
+        footer={
+          <>
+            <button onClick={() => setDeleteConfirm(null)} className="btn-secondary">Cancel</button>
+            <button onClick={() => { deleteCategory(deleteConfirm.id); setDeleteConfirm(null); }} className="btn-danger">Delete</button>
+          </>
+        }
+      />
     </div>
   );
 }

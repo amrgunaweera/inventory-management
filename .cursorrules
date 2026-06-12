@@ -1,0 +1,2 @@
+# Project Rules
+- **Form Fields:** You MUST use shadcn/ui components for all form fields. Do not use generic native HTML form inputs.

@@ -2,8 +2,9 @@ import { NavLink, useNavigate } from 'react-router-dom';
 import {
   IconLayoutDashboard, IconPackage, IconTag, IconShoppingCart,
   IconChartBar, IconBell, IconFileExport, IconSettings,
-  IconCreditCard, IconLock, IconChevronRight, IconBuildingStore,
-  IconUsers, IconTruck, IconBuildingWarehouse, IconClipboardList,
+  IconLock, IconChevronRight, IconBuildingStore,
+  IconUsers, IconTruck, IconBuildingWarehouse, IconClipboardList, IconWorld,
+  IconCreditCard
 } from '@tabler/icons-react';
 import { useSubscription } from '../../context/SubscriptionContext';
 import { useInventory } from '../../context/InventoryContext';
@@ -13,6 +14,8 @@ import { canAccessRoute, getRoleSidebarClasses, ROLES } from '../../lib/roles';
 const NAV_ITEMS = [
   // Core — visible to all roles (route access handled per-role)
   { label: 'Dashboard', icon: IconLayoutDashboard, to: '/dashboard', feature: null },
+  { label: 'Users', icon: IconWorld, to: '/platform/users', feature: null },
+  { label: 'Stores', icon: IconBuildingStore, to: '/platform/stores', feature: null },
   { label: 'Products', icon: IconPackage, to: '/products', feature: null },
   { label: 'Categories', icon: IconTag, to: '/categories', feature: null },
   { label: 'Orders', icon: IconShoppingCart, to: '/orders', feature: null },
@@ -49,7 +52,7 @@ export default function Sidebar() {
   // Filter nav items based on role's route access
   const visibleItems = NAV_ITEMS.filter((item) => {
     if (item.divider) return true;
-    return canAccessRoute(role, item.to);
+    return canAccessRoute(role, item.to, plan.id);
   });
 
   // Remove consecutive/trailing dividers
@@ -84,9 +87,11 @@ export default function Sidebar() {
             {ROLES[role]?.label || role}
           </span>
         )}
-        <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-widest block w-fit ${PLAN_COLORS[plan.id]}`}>
-          {plan.name} Plan
-        </span>
+        {role !== 'super_admin' && (
+          <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-widest block w-fit ${PLAN_COLORS[plan.id]}`}>
+            {plan.name} Plan
+          </span>
+        )}
       </div>
 
       {/* Navigation */}
@@ -133,21 +138,23 @@ export default function Sidebar() {
       </nav>
 
       {/* Footer */}
-      <div className="p-4 border-t border-white/5">
-        {canAccessRoute(role, '/billing') ? (
-          <button
-            onClick={() => navigate('/billing')}
-            className="w-full flex items-center gap-2 text-xs text-slate-400 hover:text-white transition-colors duration-200 group"
-          >
-            <span className="flex-1 text-left">Upgrade plan</span>
-            <IconChevronRight size={14} className="group-hover:translate-x-0.5 transition-transform" />
-          </button>
-        ) : (
-          <div className="text-xs text-slate-500">
-            {plan.name} Plan
-          </div>
-        )}
-      </div>
+      {role !== 'super_admin' && (
+        <div className="p-4 border-t border-white/5">
+          {canAccessRoute(role, '/billing') ? (
+            <button
+              onClick={() => navigate('/billing')}
+              className="w-full flex items-center gap-2 text-xs text-slate-400 hover:text-white transition-colors duration-200 group"
+            >
+              <span className="flex-1 text-left">Upgrade plan</span>
+              <IconChevronRight size={14} className="group-hover:translate-x-0.5 transition-transform" />
+            </button>
+          ) : (
+            <div className="text-xs text-slate-500">
+              {plan.name} Plan
+            </div>
+          )}
+        </div>
+      )}
     </aside>
   );
 }

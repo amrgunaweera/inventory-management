@@ -30,7 +30,7 @@ export default function Dashboard() {
   const showStockOps = hasPermission('stock.in');
 
   return (
-    <div className="space-y-6 animate-slide-up">
+    <div className="space-y-6 animate-slide-up dashboard-view">
       {/* KPI Cards — adjusted per role */}
       <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
         <KPICard
@@ -63,7 +63,7 @@ export default function Dashboard() {
           />
         )}
 
-        {showStockOps && (
+        {showStockOps && role !== 'super_admin' && (
           <KPICard
             title="Low Stock Items"
             value={lowStockProducts.length}
@@ -73,19 +73,8 @@ export default function Dashboard() {
           />
         )}
 
-        {/* Purchasing Officer: pending purchase orders */}
-        {role === 'purchasing_officer' && (
-          <KPICard
-            title="Pending Orders"
-            value={pendingOrders.filter(o => o.type === 'purchase').length}
-            sub="Awaiting processing"
-            icon={IconTruck}
-            color="blue"
-          />
-        )}
-
-        {/* Sales User: pending sales */}
-        {role === 'sales_user' && (
+        {/* Store Sales Person: pending sales */}
+        {role === 'store_sales_person' && (
           <KPICard
             title="Pending Sales"
             value={pendingOrders.filter(o => o.type === 'sale').length}
@@ -95,19 +84,8 @@ export default function Dashboard() {
           />
         )}
 
-        {/* Warehouse Staff: stock movement focus */}
-        {role === 'warehouse_staff' && (
-          <KPICard
-            title="Pending Orders"
-            value={pendingOrders.length}
-            sub="Need stock operations"
-            icon={IconBuildingWarehouse}
-            color="amber"
-          />
-        )}
-
-        {/* Management: supplier count */}
-        {role === 'management' && (
+        {/* Store Owner: active suppliers */}
+        {role === 'store_owner' && (
           <KPICard
             title="Active Suppliers"
             value={suppliers.length}
@@ -163,8 +141,7 @@ export default function Dashboard() {
             <div className="space-y-3">
               {recentOrders
                 .filter(order => {
-                  if (role === 'sales_user') return order.type === 'sale';
-                  if (role === 'purchasing_officer') return order.type === 'purchase';
+                  if (role === 'store_sales_person') return order.type === 'sale';
                   return true;
                 })
                 .slice(0, 5)

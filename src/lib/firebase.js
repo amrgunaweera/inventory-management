@@ -20,6 +20,6 @@ const analytics = getAnalytics(app);
 // Initialize Firebase Auth and Cloud Firestore
 export const auth = getAuth(app);
 export const db = getFirestore(app);
-export { analytics };
+export { analytics, firebaseConfig };
 
 export default app;
